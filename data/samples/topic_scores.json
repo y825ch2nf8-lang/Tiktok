@@ -1,0 +1,54 @@
+{
+  "ratings": [
+    {
+      "id": 0,
+      "curiosity": 9,
+      "emotion": 7,
+      "share": 9,
+      "watchtime": 8,
+      "visual_ease": 8,
+      "category": "ueberraschende Fakten",
+      "angle": "Ueberraschender Blickwinkel (Testdaten)"
+    },
+    {
+      "id": 1,
+      "curiosity": 8,
+      "emotion": 6,
+      "share": 8,
+      "watchtime": 8,
+      "visual_ease": 7,
+      "category": "Wissenschaft",
+      "angle": "Ueberraschender Blickwinkel (Testdaten)"
+    },
+    {
+      "id": 2,
+      "curiosity": 7,
+      "emotion": 5,
+      "share": 7,
+      "watchtime": 7,
+      "visual_ease": 8,
+      "category": "kuriose Fakten",
+      "angle": "Ueberraschender Blickwinkel (Testdaten)"
+    },
+    {
+      "id": 3,
+      "curiosity": 8,
+      "emotion": 6,
+      "share": 8,
+      "watchtime": 7,
+      "visual_ease": 6,
+      "category": "Geschichte",
+      "angle": "Ueberraschender Blickwinkel (Testdaten)"
+    },
+    {
+      "id": 4,
+      "curiosity": 7,
+      "emotion": 6,
+      "share": 8,
+      "watchtime": 7,
+      "visual_ease": 7,
+      "category": "kuriose Fakten",
+      "angle": "Ueberraschender Blickwinkel (Testdaten)"
+    }
+  ]
+}

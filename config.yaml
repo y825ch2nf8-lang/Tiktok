@@ -1,0 +1,155 @@
+# =====================================================================
+# Zentrale Konfiguration. Aenderungen hier brauchen keinen Code-Eingriff.
+# Geheime Keys stehen NICHT hier, sondern in .env
+# =====================================================================
+
+style:
+  name: "dark-cinematic-knowledge"      # wird im Dateinamen verwendet
+  # Wird an jeden Bild-/Video-Prompt gehaengt (Englisch funktioniert am besten)
+  visual_suffix: >-
+    dark cinematic documentary look, moody low-key lighting, teal and orange grade,
+    volumetric haze, shallow depth of field, film grain, 9:16 vertical, no text, no watermark
+
+content:
+  language: "de"                  # Sprache von Skript, Caption, Voice-over
+  language_name: "Deutsch"
+  min_duration: 20                # Sekunden (Ziel laut Vorgabe)
+  max_duration: 45
+  target_duration: 30
+  words_per_second: 2.6           # Sprechtempo-Schaetzung fuer Skriptlaenge
+  min_scenes: 7
+  max_scenes: 16
+  max_retries: 4                  # LLM-Wiederholungen bei ungueltigem JSON
+
+llm:
+  provider: "anthropic"           # anthropic | openai
+  model: "claude-sonnet-5-5"      # kann per LLM_MODEL ueberschrieben werden
+  max_tokens: 4096
+  temperature: 0.8
+  timeout: 120
+
+topics:
+  count_per_source: 12
+  max_candidates: 24              # so viele Themen werden bewertet
+  max_llm_brainstorm: 10          # evergreen-Themen vom LLM (werden mit Wikipedia belegt)
+  sources: ["wikipedia_mostread", "wikipedia_onthisday", "hackernews", "llm_evergreen"]
+  wikipedia_lang: "de"
+  categories:
+    - Psychologie
+    - ueberraschende Fakten
+    - menschliches Verhalten
+    - KI
+    - Technologie
+    - Geld
+    - Business
+    - Wissenschaft
+    - Geschichte
+    - Mystery
+    - ungewoehnliche Ereignisse
+    - kuriose Fakten
+    - spannende aktuelle Themen
+  # Gewichte fuer den Gesamtscore (0-10 je Kriterium)
+  weights:
+    curiosity: 0.28
+    emotion: 0.18
+    share: 0.22
+    watchtime: 0.17
+    visual_ease: 0.15
+  min_grounding_chars: 300        # Themen mit weniger belegbaren Fakten werden verworfen
+
+voice:
+  provider: "edge"                # edge | elevenlabs | openai | mock
+  fallback_providers: ["edge"]    # wird probiert, wenn der Hauptanbieter scheitert
+  edge_voice: "de-DE-ConradNeural"
+  edge_rate: "+8%"                # etwas schneller = TikTok-Tempo
+  edge_pitch: "-2Hz"
+  elevenlabs_voice_id: ""         # Pflicht bei provider=elevenlabs (siehe README)
+  elevenlabs_model: "eleven_multilingual_v2"
+  elevenlabs_stability: 0.35      # niedrig = dynamischer
+  elevenlabs_similarity: 0.8
+  elevenlabs_style: 0.45
+  openai_model: "gpt-4o-mini-tts"
+  openai_voice: "onyx"
+  openai_instructions: "Sprich spannend, ruhig, dramatisch wie ein Dokumentarfilm-Erzaehler. Kurze Pausen vor Wendepunkten."
+  max_speedup: 1.15               # Notbremse, wenn das Voice-over zu lang wird
+  pad_start: 0.25                 # Stille vor dem ersten Wort (Sekunden)
+  pad_end: 0.9                    # Stille nach dem letzten Wort
+
+visuals:
+  providers: ["pexels", "local", "procedural"]   # Reihenfolge = Prioritaet
+  pexels_per_query: 8
+  min_clip_seconds: 2.5
+  openai_image_model: "gpt-image-1"
+  openai_image_size: "1024x1536"
+  local_dirs: ["assets/videos", "assets/images"]
+  cache: true
+
+editing:
+  width: 1080
+  height: 1920
+  fps: 30
+  max_shot_seconds: 3.0           # laengere Szenen werden in Shots geteilt
+  min_shot_seconds: 1.2
+  transition_seconds: 0.22        # 0 = harte Schnitte
+  transitions: ["fade", "smoothleft", "fadeblack", "smoothright", "dissolve"]
+  twist_transition: "fadeblack"
+  zoom_strength: 0.12             # Kamera-Zoom pro Shot (0.12 = 12 %)
+  grade:
+    contrast: 1.12
+    saturation: 0.82
+    brightness: -0.03
+    vignette: true
+    grain: 7                      # 0 = aus
+  video_crf: 18
+  video_preset: "medium"
+  audio_bitrate: "192k"
+
+subtitles:
+  enabled: true
+  font_name: "Montserrat ExtraBold"   # Fallback: System-Font. Eigene Fonts nach assets/fonts/
+  font_size: 92
+  outline: 7
+  shadow: 3
+  y_ratio: 0.64                   # vertikale Position (0=oben, 1=unten) - ausserhalb der TikTok-UI
+  max_words_per_chunk: 3
+  uppercase: true
+  primary_color: "#FFFFFF"
+  active_color: "#FFD23F"         # aktuelles Wort
+  emphasis_color: "#FF3B3B"       # wichtige Woerter
+  outline_color: "#000000"
+  pop_animation: true
+
+audio:
+  # Alle Werte sind lineare Faktoren (1.0 = unveraendert)
+  voice_volume: 1.0
+  music_volume: 0.22
+  ambient_volume: 0.10
+  sfx_volume: 1.0               # Master-Regler fuer alle Soundeffekte
+  whoosh_volume: 0.40
+  impact_volume: 0.85
+  bass_hit_volume: 0.75
+  riser_volume: 0.45
+  music_enabled: true
+  sfx_enabled: true
+  ambient_enabled: true
+  whoosh_on_cuts: true
+  # Ducking: Musik wird automatisch leiser, solange gesprochen wird
+  duck_threshold: 0.03
+  duck_ratio: 8
+  duck_attack_ms: 20
+  duck_release_ms: 450
+  music_fade_in: 1.0
+  music_fade_out: 2.0
+  target_lufs: -14                # Lautheit fuer TikTok
+  true_peak: -1.5
+
+export:
+  output_dir: "output/finished"
+  work_dir: "output/work"
+  keep_work: false                # true = Zwischendateien behalten (Debugging)
+  tiktok_max_caption: 2200
+  max_hashtags: 6
+
+pipeline:
+  step_retries: 2
+  retry_delay: 3

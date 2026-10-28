@@ -1,0 +1,10 @@
+# Kern
+requests>=2.31
+python-dotenv>=1.0
+PyYAML>=6.0
+
+# TTS (Standard-Anbieter, kostenlos, kein API-Key noetig)
+edge-tts>=6.1.9
+
+# Tests (optional)
+pytest>=8.0

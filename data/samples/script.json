@@ -1,0 +1,134 @@
+{
+  "topic": "Oktopus",
+  "title": "Der Oktopus hat drei Herzen",
+  "hooks": [
+    "Dieses Tier hat drei Herzen.",
+    "Ein Herz dieses Tieres setzt beim Schwimmen aus.",
+    "Blau statt rot: das Blut dieses Tieres.",
+    "Drei Herzen, blaues Blut."
+  ],
+  "hook": "Dieses Tier hat drei Herzen.",
+  "cta": "Folge mir für mehr Wissen, das unter die Haut geht.",
+  "sources_used": [
+    "https://de.wikipedia.org/wiki/Kraken"
+  ],
+  "scenes": [
+    {
+      "role": "hook",
+      "narration": "Dieses Tier hat drei Herzen.",
+      "visual_prompt": "dark ocean floor, a large octopus emerging from a cave, cinematic backlight, moody blue haze",
+      "search_query": "octopus underwater",
+      "camera": "zoom_in",
+      "sfx": "impact",
+      "emphasis": [
+        "drei"
+      ]
+    },
+    {
+      "role": "curiosity",
+      "narration": "Und eines davon hört auf zu schlagen, sobald es schwimmt.",
+      "visual_prompt": "octopus swimming in dark deep water, spotlight cone, floating particles",
+      "search_query": "octopus swimming",
+      "camera": "push_in",
+      "sfx": "none",
+      "emphasis": [
+        "schwimmt"
+      ]
+    },
+    {
+      "role": "info",
+      "narration": "Die Rede ist vom Oktopus.",
+      "visual_prompt": "close-up of an octopus eye, dramatic rim light, macro lens",
+      "search_query": "octopus eye close up",
+      "camera": "zoom_out",
+      "sfx": "whoosh",
+      "emphasis": [
+        "Oktopus"
+      ]
+    },
+    {
+      "role": "info",
+      "narration": "Zwei seiner Herzen pumpen Blut durch die Kiemen.",
+      "visual_prompt": "octopus tentacles in dark water, bioluminescent glow",
+      "search_query": "tentacles deep sea",
+      "camera": "pan_left",
+      "sfx": "none",
+      "emphasis": [
+        "Kiemen"
+      ]
+    },
+    {
+      "role": "info",
+      "narration": "Das dritte versorgt den ganzen Körper.",
+      "visual_prompt": "octopus gliding over a reef at night, slow camera",
+      "search_query": "octopus reef night",
+      "camera": "pan_right",
+      "sfx": "none",
+      "emphasis": [
+        "Körper"
+      ]
+    },
+    {
+      "role": "info",
+      "narration": "Und dieses Blut ist nicht rot, sondern blau.",
+      "visual_prompt": "glowing blue liquid swirling in darkness, macro, cinematic",
+      "search_query": "blue liquid macro",
+      "camera": "zoom_in",
+      "sfx": "whoosh",
+      "emphasis": [
+        "blau"
+      ]
+    },
+    {
+      "role": "info",
+      "narration": "Der Grund: Statt Eisen enthält es Kupfer.",
+      "visual_prompt": "copper metal texture, molten glow, dark studio lighting",
+      "search_query": "copper metal",
+      "camera": "drift_up",
+      "sfx": "none",
+      "emphasis": [
+        "Kupfer"
+      ]
+    },
+    {
+      "role": "twist",
+      "narration": "Doch jetzt kommt der Haken.",
+      "visual_prompt": "dark water, silhouette of octopus approaching camera, tension",
+      "search_query": "dark underwater silhouette",
+      "camera": "push_in",
+      "sfx": "riser",
+      "emphasis": []
+    },
+    {
+      "role": "twist",
+      "narration": "Beim Schwimmen stellt das Körperherz seine Arbeit ein.",
+      "visual_prompt": "heart pulse light fading in darkness, slow motion, cinematic",
+      "search_query": "heartbeat monitor dark",
+      "camera": "zoom_out",
+      "sfx": "bass_hit",
+      "emphasis": [
+        "Arbeit"
+      ]
+    },
+    {
+      "role": "payoff",
+      "narration": "Deshalb ist Schwimmen für Kraken Schwerstarbeit, und sie kriechen lieber.",
+      "visual_prompt": "octopus crawling across the seabed, soft light rays from above",
+      "search_query": "octopus crawling seabed",
+      "camera": "pan_left",
+      "sfx": "none",
+      "emphasis": [
+        "kriechen"
+      ]
+    },
+    {
+      "role": "cta",
+      "narration": "Folge mir für mehr Wissen, das unter die Haut geht.",
+      "visual_prompt": "dark ocean surface at dusk, light reflections, calm ending shot",
+      "search_query": "ocean dusk waves",
+      "camera": "zoom_out",
+      "sfx": "none",
+      "emphasis": []
+    }
+  ]
+}
