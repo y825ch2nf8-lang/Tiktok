@@ -18,3 +18,5 @@ assets/videos/*
 assets/images/*
 !assets/**/.gitkeep
 !data/**/.gitkeep
+trader_tracker/data/
+output/trader_report/

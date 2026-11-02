@@ -1,0 +1,33 @@
+# Wen soll der Bot verfolgen?
+# kind: 13f   -> Quartalsdepot eines Fonds (cik = CIK des Fonds bei der SEC)
+# kind: form4 -> Insider-Trades einer Firma (ticker) oder einer Person (cik)
+# weight: wie stark der Trader in die Signale eingeht (1.0 = normal)
+#
+# CIKs bitte bei Bedarf prüfen: https://www.sec.gov/cgi-bin/browse-edgar?company=NAME&type=13F-HR
+
+superinvestors:
+  - {name: "Berkshire Hathaway (Warren Buffett)", cik: "1067983", weight: 1.5}
+  - {name: "Scion Asset Mgmt (Michael Burry)",    cik: "1649339", weight: 1.2}
+  - {name: "Pershing Square (Bill Ackman)",       cik: "1336528", weight: 1.2}
+  - {name: "Duquesne Family Office (Druckenmiller)", cik: "1536411", weight: 1.3}
+  - {name: "Appaloosa (David Tepper)",            cik: "1656456", weight: 1.2}
+  - {name: "Baupost Group (Seth Klarman)",        cik: "1061768"}
+  - {name: "Himalaya Capital (Li Lu)",            cik: "1709323"}
+  - {name: "Bridgewater (Ray Dalio)",             cik: "1350694", weight: 0.8}
+
+# Insider-Käufe/-Verkäufe dieser Firmen (CEO, CFO, Vorstände ...) mit exaktem Datum
+insider_companies:
+  - {ticker: "NVDA"}
+  - {ticker: "TSLA"}
+  - {ticker: "AAPL"}
+  - {ticker: "MSFT"}
+  - {ticker: "META"}
+  - {ticker: "AMZN"}
+  - {ticker: "JPM"}
+  - {ticker: "PLTR"}
+
+settings:
+  since_days: 730        # Insider-Trades der letzten X Tage laden
+  quarters: 8            # 13F: so viele Quartale vergleichen
+  benchmark: "SPY"
+  hold_days: 60          # Backtest-Haltedauer in Handelstagen
