@@ -1,0 +1,24 @@
+# Crypto-Tracker Einstellungen
+
+discover:
+  top: 20                    # so viele Top-Trader beobachten
+  min_account_value: 100000  # Mindest-Kontogröße in $ (filtert Glücksritter mit Mini-Konten)
+  max_turnover: 150          # Monatsvolumen / Kontowert. Höher = vermutlich Market-Maker/HFT-Bot -> raus
+
+# Zusätzlich eigene Wallets beobachten (optional)
+traders: []
+#  - {address: "0x...", name: "Mein Lieblingstrader", weight: 1.5}
+
+fetch_days: 30               # wie viele Tage Trade-Historie laden
+timezone: "Europe/Berlin"    # Uhrzeiten im Report
+copy_delay_minutes: 5        # wie spät man realistisch kopiert
+
+signals:
+  window_hours: 24           # Zeitfenster für Konsens
+  min_traders: 3             # ab wie vielen Tradern in dieselbe Richtung
+  hold_hours: 24             # Backtest-Haltedauer
+
+watch:
+  interval_seconds: 60
+  min_notional_usd: 25000    # nur Trades ab dieser Größe melden
+  paper_size_usd: 100        # Spielgeld pro kopiertem Trade

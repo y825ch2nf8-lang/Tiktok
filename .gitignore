@@ -20,3 +20,5 @@ assets/images/*
 !data/**/.gitkeep
 trader_tracker/data/
 output/trader_report/
+crypto_tracker/data/
+output/crypto_report/

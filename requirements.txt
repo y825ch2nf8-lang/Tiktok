@@ -8,3 +8,6 @@ edge-tts>=6.1.9
 
 # Tests (optional)
 pytest>=8.0
+
+# Crypto-Tracker: Zeitzonen (unter Windows nötig)
+tzdata>=2024.1
