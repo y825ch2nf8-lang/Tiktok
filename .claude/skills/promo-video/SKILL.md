@@ -33,6 +33,12 @@ Version 1 von „Bonn leuchtet“ wirkte nach KI. Der Nutzer hat sie abgelehnt. 
    - Instagram-UI (Play-Icons, Mehrfachbeitrag-Symbol, Texteinblendungen) wegschneiden.
    - Hochskalieren: Lanczos 2–3× + UnsharpMask. Randlos (Vollbild) nur bis ca. 2,5× Originalauflösung. Bei
      schwächerem Material das Bild als Plate (volle Breite, nicht volle Höhe) zeigen oder als Motion-Graphic lösen.
+   - **Beste Quelle sind Screenshots vom Reels-Tab** des Profils: Jede Kachel hat ca. 388×690 px, im Beitragsraster
+     nur ca. 388×515 px. Die Aufrufzahl unten (Auge-Symbol) und Play-Icons wegschneiden, ebenso Logos von Kunden
+     (Becher, Messewände, Fahrzeuge). Bei Story-Highlights (ca. 180 px) lohnt es sich meist nicht.
+   - Echte Fotos schlagen gezeichnete Grafiken. Sobald ein echtes Foto einer Leistung da ist, ersetzt es die Motion-Graphic.
+   - Hook mit Mensch: Wenn es ein Foto gibt, auf dem jemand der Kamera einen Drink oder das Produkt entgegenhält, als
+     Hook-Hintergrund nehmen. Den Bildausschnitt so wählen (`zoom` 1,15 + `fy`), dass Gesicht und Produkt über dem Text liegen.
    - Instagram, Firmen-Websites und Stock-Seiten sind in Cloud-Sessions oft gesperrt. Dann mit dem Material aus dem
      Chat arbeiten und dem Nutzer sagen, welche Domain freigegeben werden müsste. Für mehr Qualität echte Clips
      anfragen (Handyvideos der Bar, Drinks, Gäste).
@@ -57,8 +63,8 @@ Oben ein kleines Label mit der Kategorie („MOBILE BARS & CATERING · RHEINLAND
 | 2–3 | 4 Anlässe, ein Wort pro Beat, Farbwechsel | Bin ich gemeint? |
 | 3–6 | Leistungen als Karussell (je 2 Beats, Whip dazwischen, Zähler 01/06) | Was bekomme ich? |
 | 6–7 | „In drei Schritten“: Anfragen, Planen, Feiern (Break in der Musik) | Wie einfach ist Buchen? |
-| 7–8 | Vibe-Shot mit Drop (Impact + Flash) | Gefühl |
-| 8–10 | CTA: „Deine Feier. Unsere Bar.“ + Pill-Button mit Domain, pulsiert auf dem Beat | Handlung |
+| 7–8 | Vibe-Montage: 4 randlose Bilder, ein Schnitt pro Beat, Text bleibt stehen (Drop: Impact + Flash) | Gefühl |
+| 8–10 | CTA: Teamfoto oben (Vertrauen), darunter „Deine Feier. Unsere Bar.“ + Pill-Button mit Domain, pulsiert auf dem Beat | Handlung |
 | 10–11 | Endkarte „Kehl Event —“, Push-In beschleunigt in den Schnitt | Loop |
 
 **Loop-Technik:** Der Schluss endet mit einem Gedankenstrich, und der Anfang setzt den Satz fort:

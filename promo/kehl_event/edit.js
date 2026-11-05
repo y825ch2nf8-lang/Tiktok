@@ -8,7 +8,7 @@ const WINE = '#3b1416', PLATE = '#efe6d8', ORANGE = '#e8853a';
 // fit a single line into maxW by shrinking the font size
 function fit(str, fontFn, maxSize, maxW) { const w = measure(str, fontFn(100)); return Math.min(maxSize, 100 * maxW / w); }
 
-// ---------------- motion-graphic plates ----------------
+// ---------------- motion-graphic plates (fallbacks when no photo of a service exists) ----------------
 function coffeePlate(X, Y, w, h, l) {
   fill(PLATE, X, Y, w, h);
   const k = h / 800, cx = X + w / 2, cy = Y + h * .6;
@@ -67,12 +67,15 @@ function ginPlate(X, Y, w, h, l) {
 }
 
 // ---------------- shots ----------------
-function hook(l) {
-  const y1 = FEED ? 540 : 770;
+function hook(l, t) {
+  // frame face + glass above the copy (zoom gives vertical slack for the focus point)
+  photo(I.pink_cocktail, 0, 0, W, H, { zoom: 1.15 + l * .03, fx: .5, fy: .6, ...hh(t) });
+  fill('rgba(10,8,6,.22)'); topShade(); shade(H * .42, .94);
+  const y1 = FEED ? 880 : 1090;
   line('MOBILE BARS & CATERING  ·  RHEINLAND', L, T0 + 40 * S, F.label(24 * S, ACC), 0, l, { instant: true });
-  pop('Die Bar', L, y1, F.sans(200 * S), l, { align: 'left', baseline: 'alphabetic' });
-  if (l >= BEAT) pop('kommt', L, y1 + 195 * S, F.sans(200 * S), l - BEAT, { align: 'left', baseline: 'alphabetic' });
-  if (l >= 2 * BEAT) pop('zu dir.', L, y1 + 425 * S, F.serif(255 * S, ACC), l - 2 * BEAT, { align: 'left', baseline: 'alphabetic' });
+  pop('Die Bar', L, y1, F.sans(170 * S), l, { align: 'left', baseline: 'alphabetic' });
+  if (l >= BEAT) pop('kommt', L, y1 + 165 * S, F.sans(170 * S), l - BEAT, { align: 'left', baseline: 'alphabetic' });
+  if (l >= 2 * BEAT) pop('zu dir.', L, y1 + 355 * S, F.serif(215 * S, ACC), l - 2 * BEAT, { align: 'left', baseline: 'alphabetic' });
 }
 function container(l, t) {
   const Y = T0 + 110 * S, h = FEED ? 520 : 660;
@@ -94,12 +97,12 @@ const occasion = i => (l) => {
   setFont(F.label(22 * S)); x.textAlign = 'center'; x.fillStyle = fg; x.globalAlpha = .7; x.fillText(`0${i + 1} — 04`, W / 2, cy + 160 * S); x.globalAlpha = 1;
 };
 const SERV = [
-  { n: 'Mobile Bars', sub: 'INKL. BAR-CONTAINER', plate: (X, Y, w, h, l, t) => photo(I.container, X, Y, w, h, { zoom: 1.2 + l * .05, fx: .45, fy: .45, ...hh(t, .6) }) },
-  { n: 'Cocktail-Catering', sub: 'COCKTAILS & LONGDRINKS', plate: (X, Y, w, h, l, t) => photo(I.shelf, X, Y, w, h, { zoom: 1.04 + l * .05, fx: .55, fy: .4, ...hh(t, .6) }) },
-  { n: 'Barista-Catering', sub: 'KAFFEESPEZIALITÄTEN VOR ORT', plate: (X, Y, w, h, l) => coffeePlate(X, Y, w, h, l) },
+  { n: 'Mobile Bars', sub: 'INKL. BAR-CONTAINER', plate: (X, Y, w, h, l, t) => photo(I.flower_bar, X, Y, w, h, { zoom: 1.03 + l * .05, fx: .5, fy: .5, ...hh(t, .6) }) },
+  { n: 'Cocktail-Catering', sub: 'COCKTAILS & LONGDRINKS', plate: (X, Y, w, h, l, t) => photo(I.red_cocktail, X, Y, w, h, { zoom: 1.03 + l * .05, fx: .5, fy: .42, ...hh(t, .6) }) },
+  { n: 'Barista-Catering', sub: 'KAFFEESPEZIALITÄTEN VOR ORT', plate: (X, Y, w, h, l, t) => photo(I.latte, X, Y, w, h, { zoom: 1.03 + l * .05, fx: .45, fy: .55, ...hh(t, .6) }) },
   { n: 'Food & BBQ', sub: 'CATERING FÜR FIRMENFEIERN', plate: (X, Y, w, h, l, t) => photo(I.food, X, Y, w, h, { zoom: 1.04 + l * .05, fx: .45, fy: .55, ...hh(t, .6) }) },
-  { n: 'Cocktail-Workshops', sub: 'SELBST MIXEN, GEMEINSAM FEIERN', plate: (X, Y, w, h, l) => glassPlate(X, Y, w, h, l) },
-  { n: "Kehl's Gin", sub: 'UNSER GERMAN DRY GIN', plate: (X, Y, w, h, l) => ginPlate(X, Y, w, h, l) },
+  { n: 'Cocktail-Workshops', sub: 'SELBST MIXEN, GEMEINSAM FEIERN', plate: (X, Y, w, h, l, t) => photo(I.miseenplace, X, Y, w, h, { zoom: 1.03 + l * .05, fx: .5, fy: .5, ...hh(t, .6) }) },
+  { n: "Kehl's Gin", sub: 'UNSER GIN  ·  DREI SORTEN', plate: (X, Y, w, h, l, t) => photo(I.gin_bottles, X, Y, w, h, { zoom: 1.03 + l * .05, fx: .5, fy: .45, ...hh(t, .6) }) },
 ];
 const service = i => (l, t) => {
   const s = SERV[i], Y = FEED ? T0 + 100 * S : 0, h = FEED ? 780 : 1130;
@@ -129,32 +132,33 @@ function steps(l) {
   rule(L, y0 + 3 * RH, W - L, 3 * BEAT + .3, l);
   x.restore();
 }
-function vibe(l, t) {
-  const h = FEED ? 720 : 1080;
-  photo(I.party, 0, 0, W, h, { zoom: 1.12 - l * .03, fx: .5, fy: .55, grade: GRADE + ' blur(0.8px)', ...hh(t, 1.1) });
-  topShade();
-  line('FIRMENFEIERN  ·  HOCHZEITEN  ·  EVENTS', L, h + 95 * S, F.label(23 * S, ACC), .05, l);
-  line('Ihr feiert.', L, h + 245 * S, F.serif(160 * S), .15, l);
-  line('Wir machen die Bar.', L, h + 352 * S, F.sans(76 * S), .3, l);
+const VIBE = [['party', .5, .55], ['drinks_line', .5, .55], ['hall', .5, .45], ['corridor', .5, .55]];
+function vibe(l, t) {                       // 4 full-bleed cuts on the beat, copy stays on top
+  const i = Math.min(3, Math.floor(l / BEAT)), li = l - i * BEAT, [n, fx, fy] = VIBE[i];
+  let z = 1.06 + li * .06; if (i === 0) z *= 1 + .12 * Math.exp(-li * 10);
+  photo(I[n], 0, 0, W, H, { zoom: z, fx, fy, grade: GRADE + ' blur(0.5px)', ...hh(t, 1.1) });
+  topShade(); shade(H * .36, .92);
+  const y2 = B0 - 30 * S, y1 = y2 - 120 * S, yl = y1 - 178 * S;
+  line('FIRMENFEIERN  ·  HOCHZEITEN  ·  EVENTS', L, yl, F.label(23 * S, ACC), .05, l);
+  line('Ihr feiert.', L, y1, F.serif(175 * S), .12, l);
+  line('Wir machen die Bar.', L, y2, F.sans(78 * S), .26, l);
 }
 function cta(l, t) {
-  x.save(); x.globalAlpha = .3; photo(I.container, 0, 0, W, H, { zoom: 1.3, grade: GRADE + ' blur(14px) brightness(.6)' }); x.restore();
-  fill('rgba(15,13,11,.72)');
-  const Y0 = T0 + (FEED ? 160 : 200) * S;
-  line('DEIN EVENT IM RHEINLAND', L, Y0, F.label(24 * S, ACC), .02, l);
-  line('Deine Feier.', L, Y0 + 200 * S, F.serif(195 * S), .12, l);
-  line('Unsere Bar.', L, Y0 + 355 * S, F.sans(150 * S), .28, l);
-  rule(L, Y0 + 430 * S, L + 120 * S, 2 * BEAT - .1, l, ACC, 3);
-  line('Jetzt unverbindlich anfragen:', L, Y0 + 520 * S, F.body(44 * S), 2 * BEAT, l);
+  const ph = FEED ? 420 : 760, pb = ph;           // team photo on top, call to action below
+  shutter(0, 0, W, ph, 0, l, () => photo(I.team, 0, 0, W, ph, { zoom: 1.04 + l * .015, fx: .5, fy: .5, ...hh(t, .5) }), .7);
+  line('DEIN EVENT IM RHEINLAND', L, pb + 75 * S, F.label(24 * S, ACC), .05, l);
+  line('Deine Feier.', L, pb + 250 * S, F.serif(180 * S), .15, l);
+  line('Unsere Bar.', L, pb + 380 * S, F.sans(140 * S), .3, l);
+  line('JETZT UNVERBINDLICH ANFRAGEN', L, pb + 455 * S, F.label(22 * S), 2 * BEAT, l, { alpha: .8 });
   if (l >= 3 * BEAT) {
     const ls = l - 3 * BEAT, beatPhase = ls % BEAT;
     const sc = (1 + .06 * (1 - outExpo(cl(ls / .35)))) * (1 + .03 * Math.exp(-beatPhase * 10));
-    const f = F.sans(60 * S, INK), tw = measure('kehl-event.de', f), pw = tw + 110 * S, ph = 124 * S, cy = Y0 + 660 * S;
+    const f = F.sans(58 * S, INK), tw = measure('kehl-event.de', f), pw = tw + 110 * S, phh = 116 * S, cy = pb + 545 * S;
     x.save(); x.translate(L + pw / 2, cy); x.scale(sc, sc);
-    x.beginPath(); x.roundRect(-pw / 2, -ph / 2, pw, ph, ph / 2); x.fillStyle = ACC; x.fill();
+    x.beginPath(); x.roundRect(-pw / 2, -phh / 2, pw, phh, phh / 2); x.fillStyle = ACC; x.fill();
     setFont(f); x.fillStyle = INK; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('kehl-event.de', 0, 4 * S); x.restore();
   }
-  line('@KEHL_EVENT  ·  LINK IM PROFIL', L, Y0 + 830 * S, F.label(24 * S), 5 * BEAT, l, { alpha: .75 });
+  line('@KEHL_EVENT  ·  LINK IM PROFIL', L, pb + 665 * S, F.label(23 * S), 5 * BEAT, l, { alpha: .75 });
 }
 function endCard(l) {
   const cy = H * (FEED ? .48 : .46);
@@ -181,7 +185,7 @@ const shots = [
 ];
 window.EDIT = {
   dur: at(44), loop: true, accent: ORANGE,
-  assets: { container: 'img/container.jpg', shelf: 'img/shelf.jpg', food: 'img/food.jpg', party: 'img/party.jpg', gin: 'img/gin.jpg', logo: 'img/logo.jpg' },
+  assets: Object.fromEntries(['container', 'food', 'party', 'gin', 'logo', 'pink_cocktail', 'flower_bar', 'red_cocktail', 'latte', 'miseenplace', 'gin_bottles', 'drinks_line', 'hall', 'corridor', 'team'].map(n => [n, `img/${n}.jpg`])),
   shots,
   fx: [
     { type: 'flash', t: 0, a: .35 },
