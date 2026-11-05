@@ -1,0 +1,201 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Mont;font-weight:500;src:url(fonts/Montserrat-500.ttf)}
+@font-face{font-family:Mont;font-weight:800;src:url(fonts/Montserrat-800.ttf)}
+@font-face{font-family:Mont;font-weight:900;src:url(fonts/Montserrat-900.ttf)}
+@font-face{font-family:Cav;font-weight:700;src:url(fonts/Caveat-700.ttf)}
+html,body{margin:0;background:#0b0b18;overflow:hidden}
+canvas{display:block}
+</style></head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+const W=1080,H=1920,DUR=23;
+const c=document.getElementById('c'),x=c.getContext('2d');
+const EMO='"Noto Color Emoji"';
+const img={};
+function load(n){return new Promise(r=>{const i=new Image();i.onload=()=>{img[n]=i;r()};i.src='img/'+n+'.jpg'})}
+
+// helpers
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+const eo=t=>1-Math.pow(1-cl(t),3);            // ease out cubic
+const eio=t=>{t=cl(t);return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2};
+const back=t=>{t=cl(t);const s=1.4;return 1+(s+1)*Math.pow(t-1,3)+s*Math.pow(t-1,2)};
+const prog=(t,a,d)=>cl((t-a)/d);
+// scene visibility with soft crossfades
+function vis(t,a,b,f=.7){return cl(Math.min((t-a)/f,(b-t)/f))}
+
+function rr(X,Y,w,h,r){x.beginPath();x.roundRect(X,Y,w,h,r)}
+function text(s,X,Y,font,fill,align='center',a=1,glow=0,glowCol='#fff'){
+  x.save();x.globalAlpha*=a;x.font=font;x.textAlign=align;x.textBaseline='middle';
+  if(glow){x.shadowColor=glowCol;x.shadowBlur=glow}
+  x.fillStyle=fill;x.fillText(s,X,Y);x.restore();
+}
+function rainbow(X0,X1){const g=x.createLinearGradient(X0,0,X1,0);
+  ['#ff6fb5','#ffb84d','#ffe66b','#5ef0c0','#58b7ff','#b57bff'].forEach((c,i,a)=>g.addColorStop(i/(a.length-1),c));return g}
+
+// background bokeh (seeded)
+let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const cols=['#ff4fa3','#ffb347','#3ee6b5','#4aa3ff','#a66bff','#ffe066'];
+const orbs=[...Array(26)].map(()=>({x:rnd()*W,y:rnd()*H,r:60+rnd()*190,c:cols[Math.floor(rnd()*cols.length)],sp:.15+rnd()*.35,ph:rnd()*6.28,a:.10+rnd()*.18}));
+const dust=[...Array(70)].map(()=>({x:rnd()*W,y:rnd()*H,r:1+rnd()*2.6,sp:8+rnd()*22,ph:rnd()*6.28}));
+function bg(t){
+  const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#120d2b');g.addColorStop(.55,'#0b1028');g.addColorStop(1,'#071a22');
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  x.globalCompositeOperation='lighter';
+  for(const o of orbs){
+    const ox=o.x+Math.sin(t*o.sp+o.ph)*70, oy=o.y+Math.cos(t*o.sp*.8+o.ph)*90-t*6;
+    const yy=((oy%H)+H)%H;
+    const rg=x.createRadialGradient(ox,yy,0,ox,yy,o.r);
+    const pulse=o.a*(.75+.25*Math.sin(t*.9+o.ph));
+    rg.addColorStop(0,hexA(o.c,pulse));rg.addColorStop(1,hexA(o.c,0));
+    x.fillStyle=rg;x.beginPath();x.arc(ox,yy,o.r,0,7);x.fill();
+  }
+  for(const d of dust){
+    const yy=(((d.y-t*d.sp)%H)+H)%H, xx=d.x+Math.sin(t*.5+d.ph)*20;
+    x.fillStyle=`rgba(255,240,210,${.25+.25*Math.sin(t*2+d.ph)})`;x.beginPath();x.arc(xx,yy,d.r,0,7);x.fill();
+  }
+  x.globalCompositeOperation='source-over';
+}
+function hexA(h,a){const n=parseInt(h.slice(1),16);return `rgba(${n>>16},${n>>8&255},${n&255},${a})`}
+
+function photo(im,X,Y,w,h,r,zoom,panX=0,panY=0,sx=0,sy=0,sw=im.width,sh=im.height){
+  x.save();rr(X,Y,w,h,r);x.clip();
+  // cover-fit
+  const s=Math.max(w/sw,h/sh)*zoom, dw=sw*s, dh=sh*s;
+  x.drawImage(im,sx,sy,sw,sh,X+(w-dw)/2+panX,Y+(h-dh)/2+panY,dw,dh);
+  x.restore();
+}
+function card(X,Y,w,h,r,a=1){x.save();x.globalAlpha*=a;x.shadowColor='rgba(0,0,0,.55)';x.shadowBlur=60;x.shadowOffsetY=25;
+  rr(X,Y,w,h,r);x.fillStyle='#000';x.fill();x.restore()}
+function logo(cx,cy,R,a=1){
+  x.save();x.globalAlpha*=a;x.shadowColor='rgba(255,200,120,.6)';x.shadowBlur=40;
+  x.beginPath();x.arc(cx,cy,R+8,0,7);x.fillStyle='#f4e6d0';x.fill();x.shadowBlur=0;
+  x.beginPath();x.arc(cx,cy,R,0,7);x.clip();
+  const L=img.logo;x.drawImage(L,32,32,236,236,cx-R,cy-R,2*R,2*R);x.restore();
+}
+function chip(label,cx,cy,a,s){
+  x.save();x.globalAlpha*=a;x.translate(cx,cy);x.scale(s,s);
+  x.font='800 40px Mont, '+EMO;const w=x.measureText(label).width+70;
+  rr(-w/2,-42,w,84,42);x.fillStyle='rgba(255,255,255,.12)';x.fill();
+  x.lineWidth=2;x.strokeStyle='rgba(255,255,255,.35)';x.stroke();
+  x.fillStyle='#fff';x.textAlign='center';x.textBaseline='middle';x.fillText(label,0,3);x.restore();
+}
+
+// ---------- scenes ----------
+function s1(t,A){ // 0-4.4 intro
+  x.save();x.globalAlpha=A;
+  const a1=eo(prog(t,.3,1.1)), a2=eo(prog(t,.9,1.3)), a3=eo(prog(t,1.9,1));
+  text('DIESES WOCHENENDE',W/2,700-30*(1-a1),'600 46px Mont','rgba(255,255,255,.9)','center',a1);
+  x.save();x.letterSpacing='0px';
+  const sway=Math.sin(t*1.2)*6;
+  x.globalAlpha*=a2;
+  x.font='700 250px Cav';x.textAlign='center';x.textBaseline='middle';
+  x.shadowColor='rgba(255,150,220,.8)';x.shadowBlur=50;
+  x.fillStyle=rainbow(200,880);x.fillText('Bonn',W/2,880+sway+40*(1-a2));
+  x.shadowColor='rgba(90,200,255,.8)';
+  x.fillText('leuchtet',W/2,1080-sway+60*(1-a2));
+  x.restore();
+  // date pill
+  x.save();x.globalAlpha*=a3;const s=.85+.15*back(prog(t,1.9,.9));x.translate(W/2,1290);x.scale(s,s);
+  rr(-300,-55,600,110,55);x.fillStyle='#ffe066';x.fill();
+  x.fillStyle='#1a1030';x.font='900 52px Mont';x.textAlign='center';x.textBaseline='middle';x.fillText('06. – 08. NOV',0,4);x.restore();
+  text('✨',W/2+330,1210,'64px '+EMO,'#fff','center',a3*(.6+.4*Math.sin(t*3)));
+  text('✨',W/2-340,1360,'48px '+EMO,'#fff','center',a3*(.6+.4*Math.cos(t*3)));
+  x.restore();
+}
+function s2(t,A){ // 3.8-9 city
+  const l=t-3.8;x.save();x.globalAlpha=A;
+  const a=eo(prog(l,0,1.2));
+  text('Die ganze Innenstadt',W/2,390-25*(1-a),'700 96px Cav','#fff','center',a,30,'rgba(255,120,200,.7)');
+  text('strahlt in allen Farben',W/2,490-25*(1-a),'700 96px Cav','#ffe066','center',eo(prog(l,.35,1.2)),30,'rgba(255,200,80,.6)');
+  const ca=eo(prog(l,.4,1.4)), y=600+60*(1-ca);
+  card(90,y,900,900,46,ca);
+  x.save();x.globalAlpha*=ca;
+  photo(img.crowd,90,y,900,900,46,1.02+l*.022,-l*6,0,0,40,img.crowd.width,img.crowd.height-40);
+  x.restore();
+  const ta=eo(prog(l,1.4,1));
+  text('Food · Musik · Lichter',W/2,1590+20*(1-ta),'800 50px Mont','rgba(255,255,255,.92)','center',ta);
+  x.restore();
+}
+function s3(t,A){ // 8.4-14 bar
+  const l=t-8.4;x.save();x.globalAlpha=A;
+  const a=eo(prog(l,0,1));
+  text('Und mittendrin…',W/2,330-20*(1-a),'600 50px Mont','rgba(255,255,255,.85)','center',a);
+  const b=eo(prog(l,.3,1.2));
+  text('Vino & Spritz Bar',W/2,450+30*(1-b),'700 128px Cav','#ffd36e','center',b,45,'rgba(255,190,90,.75)');
+  const ca=eo(prog(l,.5,1.5));
+  x.save();x.globalAlpha*=ca;x.translate(W/2,860);x.rotate((1-ca)*-.06+Math.sin(l*.8)*.006);x.scale(.92+.08*ca,.92+.08*ca);
+  card(-470,-310,940,620,40);
+  photo(img.bar,-470,-310,940,620,40,1.0+l*.012,0,0);
+  x.restore();
+  logo(W/2+400,1150,78,eo(prog(l,1.2,1)));
+  const chips=['🍷 Tolle Weine','🍹 Spritz','🥂 Gute Laune'];
+  const pos=[[W/2,1330],[W/2-205,1450],[W/2+170,1450]];
+  chips.forEach((s,i)=>{const p=prog(l,1.6+i*.35,.8);chip(s,pos[i][0],pos[i][1]+Math.sin(l*1.4+i)*5,eo(p),.6+.4*back(p))});
+  x.restore();
+}
+function s4(t,A){ // 13.6-18.8 programm
+  const l=t-13.6;x.save();x.globalAlpha=A;
+  const a=eo(prog(l,0,1));
+  text('Das Programm',W/2,360-20*(1-a),'700 120px Cav','#fff','center',a,40,'rgba(120,200,255,.7)');
+  const items=[
+    ['FR','17:50','Eröffnung mit Chor','„All Inclusive"','#ff6fb5'],
+    ['SA','17:30','Tanzaktionen','in der City & am Sterntor','#ffb84d'],
+    ['SO','13–18','Verkaufsoffener','Sonntag','#5ef0c0'],
+    ['SO','ab 17','Beleuchtung','der Stadttore','#58b7ff'],
+  ];
+  items.forEach((it,i)=>{
+    const p=eo(prog(l,.6+i*.45,1.1)), y=540+i*230, X=110-120*(1-p);
+    x.save();x.globalAlpha*=p;
+    rr(X,y,860,195,36);x.fillStyle='rgba(255,255,255,.09)';x.fill();x.lineWidth=2;x.strokeStyle='rgba(255,255,255,.18)';x.stroke();
+    rr(X+28,y+28,140,139,28);x.fillStyle=it[4];x.fill();
+    text(it[0],X+98,y+80,'900 56px Mont','#16102a');
+    text(it[1],X+98,y+132,'800 28px Mont','#16102a');
+    text(it[2],X+205,y+76,'800 46px Mont','#fff','left');
+    text(it[3],X+205,y+130,'500 36px Mont','rgba(255,255,255,.7)','left');
+    x.restore();
+  });
+  x.restore();
+}
+function s5(t,A){ // 18.4-23 outro
+  const l=t-18.4;x.save();x.globalAlpha=A;
+  const ia=eo(prog(l,0,1.4));
+  x.save();x.globalAlpha*=ia*.95;
+  card(90,250,900,450,46);
+  photo(img.rathaus,90,250,900,450,46,1.05+l*.02,-l*8,0,0,0,640,img.rathaus.height);
+  x.restore();
+  const a=eo(prog(l,.5,1.2)), b=eo(prog(l,.9,1.2));
+  text('Kommt vorbei',W/2,850-25*(1-a),'700 140px Cav','#fff','center',a,40,'rgba(255,130,210,.7)');
+  text('& stoßt mit uns an 🥂',W/2,990-25*(1-b),'700 96px Cav, '+EMO,'#ffe066','center',b,30,'rgba(255,200,80,.6)');
+  const la=eo(prog(l,1.5,1));
+  logo(W/2,1200,95,la);
+  text('@kehl_event',W/2,1360,'900 58px Mont','#fff','center',la);
+  const da=eo(prog(l,2.1,1));
+  text('Bonner Innenstadt · 06.–08.11.',W/2,1450,'600 40px Mont','rgba(255,255,255,.8)','center',da);
+  // rising glasses
+  ['🍷','🥂','🍹','🥂','🍷'].forEach((e,i)=>{
+    const st=1.2+i*.5, p=l-st; if(p<0)return;
+    const yy=1700-p*150, xx=[120,960,200,880,110][i]+Math.sin(p*1.5+i)*25;
+    text(e,xx,yy,'60px '+EMO,'#fff','center',cl(p/.6)*cl((yy-300)/600)*.85);
+  });
+  x.restore();
+}
+
+function render(t){
+  x.clearRect(0,0,W,H);bg(t);
+  const sc=[[s1,0,4.4],[s2,3.8,9.0],[s3,8.4,14.2],[s4,13.6,18.9],[s5,18.4,DUR+1]];
+  for(const [f,a,b] of sc){const v=t<1&&a===0?1:vis(t,a,b,.6);if(v>0)f(t,v)}
+  // global fade in/out
+  const g=cl(Math.min(t/.5,(DUR-t)/.8));if(g<1){x.fillStyle=`rgba(5,5,12,${1-g})`;x.fillRect(0,0,W,H)}
+  // soft vignette
+  const v=x.createRadialGradient(W/2,H/2,H*.35,W/2,H/2,H*.75);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.45)');
+  x.fillStyle=v;x.fillRect(0,0,W,H);
+}
+window.DUR=DUR;window.render=render;
+window.ready=(async()=>{
+  await Promise.all(['crowd','bar','rathaus','logo'].map(load));
+  await Promise.all(['500 40px Mont','800 40px Mont','900 40px Mont','700 40px Cav','40px "Noto Color Emoji"'].map(f=>document.fonts.load(f,'Aä🍷🥂🍹✨')));
+  render(0);return true;
+})();
+</script></body></html>
