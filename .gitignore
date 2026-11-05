@@ -23,3 +23,8 @@ output/trader_report/
 crypto_tracker/data/
 output/crypto_report/
 ball_escape/node_modules/
+
+# promo engine working files
+promo/*/preview/
+promo/*/out/
+promo/*/music.wav
