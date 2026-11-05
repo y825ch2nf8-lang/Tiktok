@@ -11,7 +11,9 @@ umsetzungsorientiert. Das Werkzeug ist `ball_escape/` (Node + Headless-Chromium 
 ## 1. Videos produzieren
 
 ```bash
-node ball_escape/render.js                                   # 1 Video, ~67 s, 12 Ringe, Song baut sich pro Ring auf
+node ball_escape/render.js --scene box --skin cat            # Top-Format: Arena, +2 je Entkommen, bis 1.000
+node ball_escape/render.js --scene box --lang en             # englisch für weltweite Reichweite
+node ball_escape/render.js                                   # Ring-Format: 12 Ringe, Song baut sich pro Ring auf
 node ball_escape/render.js --melody korobeiniki,turca,toccata  # Serie, ein Video pro Song
 node ball_escape/render.js --seed-start 3000                 # neuer Ablauf (jeder Seed = anderes Video)
 node ball_escape/render.js --mode double --target 25         # kurze Version für Shorts/Reels
@@ -56,6 +58,15 @@ Nennt der Nutzer Views, Likes oder die Watchtime eigener Videos, trägst du sie 
 Länge oder welcher Hook besser läuft. Diese Erkenntnisse kommen in die Regeln unten.
 
 ## Gelernte Regeln (immer anwenden, mit Quelle erweitern)
+
+- **Standard = `--scene box`** mit Figuren (`--skin cat|smiley|egg`), Zähler bis `--goal 1000`. Die Top-Videos von
+  @loopdatcoding und @realracery funktionieren genau so; Videos mit schlichten Bällen liegen weit dahinter.
+  *(Screenshots 05.11.2026, siehe konkurrenz.md)*
+- Text kurz und in Großbuchstaben: Frage oben („WIE SCHNELL ERKENNST DU DEN SONG?“), Regel als weißes Label. Jedes Mal
+  derselbe Hook, damit er zum Markenzeichen wird.
+- Wasserzeichen mit dem Handle des Nutzers (`--watermark @handle`) gegen Reuploads.
+- Caption: Frage + genau 4 Hashtags (`#satisfyingvideos #bouncingball #relaxing #physics`).
+- A/B-Test Deutsch vs. Englisch (`--lang en`), Zahlen in konkurrenz.md eintragen.
 
 - Hook als Frage oben im Bild, Regel in einer Zeile darunter. Keine Voiceover-Stimme. *(Recherche Nov 2026)*
 - 61–75 s für TikTok Creator Rewards, 60 fps, 1080×1920. Rechts 140 px und unten 380 px frei lassen für die TikTok-Buttons.

@@ -60,6 +60,19 @@ Jeder Seed ergibt einen anderen Ablauf.
 **Serie / Teil 2:** `--rings 24 --target 75`. Der End-Screen zeigt automatisch „Teil 2: 24 Ringe“.
 Bei mehr Ringen dauert die Suche länger, dann ggf. `--tol 4` setzen.
 
+## Zwei Formate
+
+| `--scene` | Ablauf | Vorbild |
+|---|---|---|
+| `box` (**empfohlen**) | Eine große Arena mit wandernder Lücke. Jeder entkommene Ball fällt raus, dafür kommen **+2** rein. Der Zähler wächst bis `--goal` (Standard 1.000). An 12 Meilensteinen kommt je ein Instrument dazu, beim Ziel explodiert alles | Top-Videos von @loopdatcoding (523K Views) und @realracery (3,3M) |
+| `rings` | 12 Ringe nacheinander zerstören, +2 Bälle und ein Instrument pro Ring | klassisches „Can the ball escape?“ |
+
+Weitere Optionen: `--skin smiley|cat|egg|neon` (Figuren statt Bälle), `--lang de|en`, `--watermark @deinhandle`.
+
+```bash
+node ball_escape/render.js --scene box --skin cat --melody korobeiniki --watermark @deinhandle
+```
+
 ## Song-Aufbau: ein Instrument pro Ring
 
 Standardmäßig (`--music layers`) baut sich der Song mit den Ringen auf:

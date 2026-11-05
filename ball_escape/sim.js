@@ -72,9 +72,40 @@
     double: { gapStartDeg: 34, gapEndDeg: 9, gravity: 1100, minBounce: 260, startSpeed: 600 },
   };
 
+  // Szenen: 'rings' = 12 Ringe zerstören. 'box' = eine Arena mit wandernder Lücke, jedes Entkommen = +2 Bälle,
+  // der Zähler wächst exponentiell bis zum Ziel (z. B. 1.000) – wie die erfolgreichsten Accounts der Nische.
+  const SCENES = {
+    rings: {},
+    box: {
+      gravity: 0, // drinnen schwerelos: gerade Bahnen, Bälle verteilen sich über die ganze Arena
+      fallGravity: 1500, // entkommene Bälle fallen raus
+      startSpeed: 620,
+      minBounce: 0,
+      boxR: 440,
+      boxGapDeg: 55,
+      boxOmega: 0.7,
+      goal: 1000,
+      ballR: 24,
+      ballRMin: 9,
+      maxBalls: 6000,
+    },
+  };
+
   function resolve(opts) {
     const mode = (opts && opts.mode) || DEFAULTS.mode;
-    return Object.assign({}, DEFAULTS, PRESETS[mode] || {}, opts);
+    const scene = (opts && opts.scene) || 'rings';
+    return Object.assign({ scene }, DEFAULTS, PRESETS[mode] || {}, SCENES[scene] || {}, opts);
+  }
+
+  /** Meilensteine (Ballzahlen), an denen in der Box-Szene je ein Instrument dazukommt. Letzter = Ziel. */
+  function milestones(goal, n) {
+    const out = [];
+    for (let k = 1; k <= n; k++) {
+      const m = Math.round(Math.pow(goal, k / n));
+      out.push(Math.max(m, (out[out.length - 1] || 1) + 1));
+    }
+    out[n - 1] = Math.max(goal, out[n - 2] + 1);
+    return out;
   }
 
   class Sim {
@@ -110,8 +141,91 @@
 
       this.balls = [];
       this.br = o.ballR;
+      if (o.scene === 'box') {
+        this.rings = [{ i: 0, r: o.boxR, half: (o.boxGapDeg * Math.PI) / 360, omega: o.boxOmega, gc0: this.rng() * TAU, alive: true, breakT: null }];
+        this.inside = 0;
+        this.escapes = 0;
+        this.stage = 0;
+        this.milestones = milestones(o.goal, 12);
+        this.spawnInside();
+        return;
+      }
       const a = this.rng() * TAU;
       this.addBall(o.cx, o.cy, Math.cos(a) * o.startSpeed, Math.sin(a) * o.startSpeed);
+    }
+
+    spawnInside() {
+      // zufällige Position im inneren Teil der Arena, zufällige Richtung (keine Durchmesser-Bahnen)
+      const o = this.o;
+      const a = this.rng() * TAU;
+      const rr = Math.sqrt(this.rng()) * o.boxR * 0.55;
+      const d = this.rng() * TAU;
+      const b = this.addBall(o.cx + Math.cos(a) * rr, o.cy + Math.sin(a) * rr, Math.cos(d) * o.startSpeed, Math.sin(d) * o.startSpeed);
+      if (b) this.inside++;
+      return b;
+    }
+
+    boxRadius() {
+      const o = this.o;
+      return Math.max(o.ballRMin, Math.min(o.ballR, o.ballR * Math.pow(Math.max(1, this.inside) / 10, -0.22)));
+    }
+
+    substepBox() {
+      const o = this.o;
+      const dt = this.dt;
+      this.t += dt;
+      const t = this.t;
+      const ring = this.rings[0];
+      let spawn = 0;
+      let anyDead = false;
+      const balls = this.balls;
+      for (let k = 0; k < balls.length; k++) {
+        const b = balls[k];
+        const free = b.out || !ring.alive;
+        b.vy += (free ? o.fallGravity : o.gravity) * dt;
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+        if (free) {
+          if (b.y > o.height + 80 || b.y < -400 || b.x < -80 || b.x > o.width + 80) {
+            b.dead = true;
+            anyDead = true;
+          }
+          continue;
+        }
+        if (this.collide(b, ring, t)) {
+          b.out = true;
+          this.inside--;
+          this.escapes++;
+          spawn += 2;
+          this.events.push({ type: 'escape', t, x: b.x, y: b.y, balls: this.inside + 2 });
+        }
+      }
+      if (spawn) {
+        for (let k = 0; k < spawn; k++) this.spawnInside();
+        this.br = this.boxRadius();
+        while (this.stage < this.milestones.length && this.inside >= this.milestones[this.stage]) {
+          const final = this.stage === this.milestones.length - 1;
+          this.events.push({ type: 'stage', t, k: this.stage, balls: this.inside, final });
+          this.stage++;
+          if (final) {
+            ring.alive = false;
+            ring.breakT = t;
+            this.cur = 1;
+            this.gen++;
+            this.events.push({ type: 'break', t, ring: 0, x: o.cx, y: o.cy, balls: this.inside, final: true });
+            // Finale: alle Bälle explodieren nach außen
+            for (const b of balls) {
+              if (b.out) continue;
+              const dx = b.x - o.cx;
+              const dy = b.y - o.cy;
+              const d = Math.hypot(dx, dy) || 1;
+              b.vx += (dx / d) * 500;
+              b.vy += (dy / d) * 500 - 400;
+            }
+          }
+        }
+      }
+      if (anyDead) this.balls = balls.filter((b) => !b.dead);
     }
 
     addBall(x, y, vx, vy) {
@@ -272,6 +386,7 @@
     }
 
     substep() {
+      if (this.o.scene === 'box') return this.substepBox();
       const o = this.o;
       const dt = this.dt;
       this.t += dt;
@@ -354,7 +469,11 @@
 
     summary() {
       const breaks = this.log.filter((e) => e.type === 'break').map((e) => +e.vt.toFixed(3));
+      const stageEv = this.log.filter((e) => e.type === 'stage');
+      const stages = this.o.scene === 'box' ? stageEv.map((e) => +e.vt.toFixed(3)) : breaks;
       return {
+        scene: this.o.scene,
+        stages,
         seed: this.o.seed,
         completed: this.finalFrame >= 0,
         finalSec: this.finalFrame >= 0 ? this.finalFrame / this.o.fps : null,
@@ -377,9 +496,10 @@
       const tl = new Timeline(Object.assign({}, o, { seed }));
       const s = tl.runHeadless(o.target + o.tol + 1);
       if (!s.completed) continue;
-      const gaps = s.breaks.map((b, i) => b - (i ? s.breaks[i - 1] : 0));
+      const st = s.stages;
+      const gaps = st.map((b, i) => b - (i ? st[i - 1] : 0));
       const err = Math.abs(s.finalSec - o.target);
-      const paced = s.breaks[0] >= o.minFirst && s.breaks[0] <= o.maxFirst && Math.max(...gaps) <= o.maxGap;
+      const paced = st[0] >= o.minFirst && st[0] <= o.maxFirst && Math.max(...gaps) <= o.maxGap;
       if (err <= o.tol && paced) return Object.assign(s, { tried: k + 1 });
       const score = err + (paced ? 0 : 5);
       if (!best || score < best.score) best = Object.assign(s, { score, tried: k + 1 });
@@ -387,5 +507,5 @@
     return best ? Object.assign(best, { approximate: true }) : null;
   }
 
-  return { Sim, Timeline, findSeed, resolve, mulberry32, DEFAULTS, PRESETS, PHYSICS_HZ, TAU };
+  return { Sim, Timeline, findSeed, resolve, milestones, SCENES, mulberry32, DEFAULTS, PRESETS, PHYSICS_HZ, TAU };
 });

@@ -410,8 +410,10 @@ function renderAudio(events, durationSec, opts) {
   const song = opts.song || null;
   const layered = !!song && opts.music !== 'bounce';
   const breaks = events.filter((e) => e.type === 'break');
-  const songStart = layered && breaks.length ? breaks[0].vt : null;
-  const unlock = layered ? Arrangement.unlockTimes(breaks.map((b) => b.vt), opts.rings || breaks.length) : null;
+  // Freischalt-Zeitpunkte: Ringbrüche (Ring-Szene) oder Ball-Meilensteine (Box-Szene)
+  const stageTimes = opts.stageTimes || breaks.map((b) => b.vt);
+  const songStart = layered && stageTimes.length ? stageTimes[0] : null;
+  const unlock = layered ? Arrangement.unlockTimes(stageTimes, opts.rings || stageTimes.length) : null;
   const melodyUnlock = unlock ? Math.min(unlock[1], unlock[7]) : Infinity;
   const cache = new Map();
   const kickTimes = [];

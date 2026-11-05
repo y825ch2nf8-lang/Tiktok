@@ -37,6 +37,14 @@
         <select id="mode"><option value="plus2">+2 Bälle</option><option value="double">×2 verdoppeln</option></select>
       </label>
     </div>
+    <div class="row">
+      <label>Szene
+        <select id="scene"><option value="box">Box (+2, bis 1.000)</option><option value="rings">Ringe</option></select>
+      </label>
+      <label>Figur
+        <select id="skin"><option value="smiley">Smiley</option><option value="cat">Katze</option><option value="egg">Ei</option><option value="neon">Neon-Ball</option></select>
+      </label>
+    </div>
     <label>Melodie
       <select id="melody"></select>
     </label>
@@ -71,7 +79,7 @@
 
   function opts() {
     const mel = Melodies.get($('melody').value);
-    return { seed: +$('seed').value, rings: +$('rings').value, mode: $('mode').value, song: $('melody').value,
+    return { seed: +$('seed').value, rings: +$('rings').value, mode: $('mode').value, song: $('melody').value, scene: $('scene').value, skin: $('skin').value,
              melody: mel.notes.map((n) => n + mel.transpose) };
   }
   function restart() { info = BE.setup(opts()); frame = 0; BE.renderFrame(0); show(); }
@@ -134,7 +142,7 @@
       restart();
     }, 30);
   };
-  ['rings', 'mode', 'melody', 'seed'].forEach((id) => $(id).addEventListener('change', restart));
+  ['rings', 'mode', 'melody', 'seed', 'scene', 'skin'].forEach((id) => $(id).addEventListener('change', restart));
   restart();
 })();
 </script>

@@ -42,6 +42,11 @@ function parseArgs(argv) {
     hook: null,
     seedStart: 1,
     music: 'layers',
+    scene: 'rings',
+    skin: null,
+    lang: 'de',
+    watermark: null,
+    goal: 1000,
   };
   for (let i = 2; i < argv.length; i++) {
     const k = argv[i].replace(/^--/, '');
@@ -54,7 +59,8 @@ function parseArgs(argv) {
         a[k] = Number(next()); break;
       case 'seed-start': a.seedStart = Number(next()); break;
       case 'seed': { const v = next(); a.seed = v === 'auto' ? 'auto' : Number(v); break; }
-      case 'mode': case 'melody': case 'out': case 'hook': case 'music': a[k] = next(); break;
+      case 'mode': case 'melody': case 'out': case 'hook': case 'music': case 'scene': case 'skin': case 'lang': case 'watermark': a[k] = next(); break;
+      case 'goal': a.goal = Number(next()); break;
       default: throw new Error('Unbekannte Option: ' + argv[i] + ' (siehe --help)');
     }
   }
@@ -79,16 +85,27 @@ function serve(port) {
 }
 
 function captionFor(a, sum, mel) {
-  const balls = sum.finalBalls.toLocaleString('de-DE');
-  const hook = a.hook ? a.hook.replace('|', ' ') : `Kann der Ball ${a.rings} Ringe zerstören?`;
-  const rule = a.mode === 'double' ? 'Jeder Ring verdoppelt die Bälle' : 'Jedes Entkommen = +2 Bälle';
+  const en = a.lang === 'en';
+  const balls = sum.finalBalls.toLocaleString(en ? 'en-US' : 'de-DE');
+  const box = a.scene === 'box';
+  const hook = a.hook
+    ? a.hook.replace('|', ' ')
+    : box
+      ? (en ? 'How fast did you guess the song?' : 'Wie schnell hast du den Song erkannt?')
+      : (en ? `Can the ball break ${a.rings} rings?` : `Kann der Ball ${a.rings} Ringe zerstören?`);
+  const layered = a.music !== 'bounce';
+  const extra = layered
+    ? (en ? ' Every step adds an instrument until the full song plays 🎶' : ' Mit jeder Stufe kommt ein Instrument dazu, bis der ganze Song läuft 🎶')
+    : '';
+  // Kurz halten: Frage + 4 Hashtags (so machen es die erfolgreichsten Accounts der Nische)
+  const hashtags = ['#satisfyingvideos', '#bouncingball', '#relaxing', '#physics'];
   return {
     hook,
-    caption: a.music === 'bounce'
-      ? `${hook} 😳 ${rule}… Erkennst du den Song? 🎵 Schreib ihn in die Kommentare 👇`
-      : `${hook} 😳 Jeder Ring schaltet ein neues Instrument frei – beim letzten Ring läuft der ganze Song 🎶 Erkennst du ihn? 👇`,
-    hashtags: ['#bouncingball', '#satisfying', '#simulation', '#physik', '#oddlysatisfying', '#fyp'],
-    pinnedComment: `Auflösung: ${balls} Bälle 🔥 Der Song war „${mel.title}“ 🎵 Welchen Song soll ich als Nächstes nehmen?`,
+    caption: `${hook} 🎵${extra} 👇`,
+    hashtags,
+    pinnedComment: en
+      ? `It was "${mel.title}" 🎵 ${balls} balls 🔥 Which song next?`
+      : `Es war „${mel.title}“ 🎵 ${balls} Bälle 🔥 Welcher Song als Nächstes?`,
     answer: balls,
   };
 }
@@ -139,7 +156,12 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
     melody: mel.notes.map((n) => n + mel.transpose),
     song: melodyName,
     music: a.music,
+    scene: a.scene,
+    lang: a.lang,
+    goal: a.goal,
   };
+  if (a.skin) simOpts.skin = a.skin;
+  if (a.watermark) simOpts.watermark = a.watermark;
   if (a.hook) simOpts.hook = a.hook;
 
   const scale = a.draft ? 0.5 : 1;
@@ -167,19 +189,19 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
     let frames = sum.totalFrames;
     if (a.seconds) frames = Math.min(frames, Math.round(a.seconds * a.fps));
     const dur = frames / a.fps;
-    console.log(`Ringe brechen bei: ${sum.breaks.map((b) => b.toFixed(1)).join(', ')} s`);
+    console.log(`${a.scene === 'box' ? 'Instrument-Meilensteine' : 'Ringe brechen'} bei: ${sum.stages.map((b) => b.toFixed(1)).join(', ')} s`);
     console.log(`Videolänge: ${dur.toFixed(2)} s, ${frames} Frames, End-Bälle: ${sum.finalBalls}`);
 
     const workDir = path.join(ROOT, 'output', 'work', 'ball_escape');
     fs.mkdirSync(workDir, { recursive: true });
     const wavPath = path.join(workDir, `audio_seed${seed}.wav`);
     const loopChimeAt = sum.completed && !a.seconds ? dur - 1.4 : null;
-    const pcm = audio.renderAudio(sum.events.filter((e) => e.vt < dur), dur, { seed, tonic: mel.tonic, chord: mel.chord, loopChimeAt, song: Melodies.compile(melodyName), rings: a.rings, music: a.music });
+    const pcm = audio.renderAudio(sum.events.filter((e) => e.vt < dur), dur, { seed, tonic: mel.tonic, chord: mel.chord, loopChimeAt, song: Melodies.compile(melodyName), rings: a.scene === 'box' ? 12 : a.rings, stageTimes: sum.stages.filter((t) => t < dur), music: a.music });
     fs.writeFileSync(wavPath, audio.toWav(pcm));
 
     // 3) Frames -> FFmpeg
     const date = new Date().toISOString().slice(0, 10);
-    const name = `${date}_ball-escape_${melodyName}_${a.rings}ringe_${a.mode}_seed${seed}${a.draft ? '_draft' : ''}`;
+    const name = `${date}_ball-escape_${a.scene === 'box' ? 'box' + a.goal : a.rings + 'ringe'}_${melodyName}_${a.lang}_seed${seed}${a.draft ? '_draft' : ''}`;
     const outPath = path.resolve((a.out && a.melody.indexOf(',') < 0 && a.out) || path.join(ROOT, 'output', 'finished', name + '.mp4'));
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     const ff = spawn('ffmpeg', [
