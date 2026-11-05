@@ -10,6 +10,7 @@
  *   node ball_escape/render.js --melody korobeiniki,turca,hummelflug   # Serie: ein Video pro Song
  *   node ball_escape/render.js --music bounce          # ohne Song-Aufbau, nur Aufprall-Noten
  *   node ball_escape/render.js --scene box --sound asmr # Geräusche statt Musik (passend zur Figur)
+ *   node ball_escape/render.js --scene box --sound asmr --threads --skin cat  # Fäden + gezupfter Faden
  *   node ball_escape/render.js --serve               # Live-Vorschau im Browser (http://localhost:8080)
  */
 'use strict';
@@ -50,6 +51,7 @@ function parseArgs(argv) {
     goal: 1000,
     sound: 'music',
     length: null,
+    threads: false,
     asmr: null,
   };
   for (let i = 2; i < argv.length; i++) {
@@ -57,6 +59,7 @@ function parseArgs(argv) {
     const next = () => argv[++i];
     switch (k) {
       case 'draft': a.draft = true; break;
+      case 'threads': a.threads = true; break;
       case 'serve': a.serve = true; break;
       case 'help': case 'h': a.help = true; break;
       case 'rings': case 'target': case 'tol': case 'fps': case 'seconds': case 'port': case 'crf': case 'seedStart':
@@ -69,6 +72,7 @@ function parseArgs(argv) {
     }
   }
   if (a.sound === 'asmr') a.music = 'asmr';
+  if (a.threads && a.music === 'asmr' && !a.asmr) a.asmr = 'string'; // Faden-Video -> gezupfter Faden
   // Kurz (≈35 s) = mehr Leute schauen bis zum Ende -> mehr Likes & Push. Lang (≈67 s) erst ab 10K Followern
   // sinnvoll (Creator Rewards). Standard: Box kurz, Ringe lang.
   if (!a.length) a.length = a.scene === 'box' ? 'short' : 'long';
@@ -137,7 +141,7 @@ function captionFor(a, sum, mel) {
 async function main() {
   const a = parseArgs(process.argv);
   if (a.help) {
-    console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(2, 15).join('\n'));
+    console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(2, 16).join('\n'));
     return;
   }
   const server = await serve(a.port);
@@ -187,6 +191,7 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
   if (a.length === 'short') Object.assign(simOpts, { boxGapDeg: 70, startSpeed: 900, outroDur: 4.5 });
   const pacing = a.length === 'short' ? { minFirst: 0.8, maxFirst: 3, maxGap: 6 } : {};
   if (a.skin) simOpts.skin = a.skin;
+  if (a.threads) simOpts.threads = true;
   if (a.watermark) simOpts.watermark = a.watermark;
   if (a.hook) simOpts.hook = a.hook;
 
@@ -227,7 +232,7 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
 
     // 3) Frames -> FFmpeg
     const date = new Date().toISOString().slice(0, 10);
-    const soundTag = a.music === 'asmr' ? 'asmr-' + (a.asmr || audio.ASMR_FOR_SKIN[simOpts.skin || 'smiley']) : melodyName;
+    const soundTag = (a.threads ? 'faden_' : '') + (a.music === 'asmr' ? 'asmr-' + (a.asmr || audio.ASMR_FOR_SKIN[simOpts.skin || 'smiley']) : melodyName);
     const name = `${date}_ball-escape_${a.scene === 'box' ? 'box' + a.goal : a.rings + 'ringe'}_${simOpts.skin || 'smiley'}_${soundTag}_${a.lang}_seed${seed}${a.draft ? '_draft' : ''}`;
     const outPath = path.resolve((a.out && a.melody.indexOf(',') < 0 && a.out) || path.join(ROOT, 'output', 'finished', name + '.mp4'));
     fs.mkdirSync(path.dirname(outPath), { recursive: true });

@@ -354,6 +354,46 @@
     }
   }
 
+  /* Fäden: von jedem Aufprallpunkt (dreht mit dem Ring) zur Figur. Neue Fäden leuchten kurz auf. */
+  function drawThreads() {
+    const sim = tl.sim;
+    const balls = sim.balls;
+    const n = balls.length || 1;
+    const budget = Math.max(3, Math.min(o.maxAnchors, Math.floor(3200 / n)));
+    const t = sim.t;
+    const fresh = [];
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (const b of balls) {
+      const an = b.anchors;
+      if (!an || !an.length || b.dead) continue;
+      for (let k = Math.max(0, an.length - budget); k < an.length; k++) {
+        const A = an[k];
+        const ring = sim.rings[A.ring];
+        const ang = A.a + ring.omega * t;
+        const x = o.cx + Math.cos(ang) * A.r;
+        const y = o.cy + Math.sin(ang) * A.r;
+        if (t - A.t < 0.3) fresh.push(x, y, b.x, b.y, t - A.t);
+        else {
+          ctx.moveTo(x, y);
+          ctx.lineTo(b.x, b.y);
+        }
+      }
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,' + (n > 200 ? 0.28 : n > 40 ? 0.4 : 0.6) + ')';
+    ctx.lineWidth = n > 200 ? 1 : 1.5;
+    ctx.stroke();
+    for (let i = 0; i < fresh.length; i += 5) {
+      const f = 1 - fresh[i + 4] / 0.3;
+      ctx.strokeStyle = `rgba(255,255,255,${0.5 + 0.5 * f})`;
+      ctx.lineWidth = 1.5 + 2 * f;
+      ctx.beginPath();
+      ctx.moveTo(fresh[i], fresh[i + 1]);
+      ctx.lineTo(fresh[i + 2], fresh[i + 3]);
+      ctx.stroke();
+    }
+  }
+
   function drawSkinBall(b, br, vt) {
     const spr = skinSprite(o.skin, b.id % 4);
     const s = br * 2.25;
@@ -371,7 +411,18 @@
     const br = tl.sim.br;
     const n = balls.length;
     if (o.skin !== 'neon') {
-      for (const b of balls) if (!b.dead) drawSkinBall(b, br, vt);
+      const t = tl.sim.t;
+      for (const b of balls) {
+        if (b.dead) continue;
+        if (b.out && tl.finalFrame < 0) {
+          // entkommene Figuren blenden schnell aus (kein Gewusel über dem Hook)
+          const a = 1 - (t - b.outT) / 0.6;
+          if (a <= 0) continue;
+          ctx.globalAlpha = a;
+          drawSkinBall(b, br, vt);
+          ctx.globalAlpha = 1;
+        } else drawSkinBall(b, br, vt);
+      }
       return;
     }
     const trailLen = n <= 3 ? 22 : n <= 9 ? 14 : n <= 40 ? 7 : 0;
@@ -684,6 +735,7 @@
       const t = 2.4 - untilEnd; // 0..2.4
       grow = (i) => (t - (i / Math.max(1, o.rings - 1)) * 0.9) / 0.6;
     }
+    if (o.threads && !grow) drawThreads();
     drawRings(vt, grow);
     drawFx();
     if (since < 0 || untilEnd > 2.4) drawBalls(vt);
@@ -755,7 +807,7 @@
   function simulate(opts) {
     const t = new Timeline(opts);
     const s = t.runHeadless();
-    s.events = t.log.map((e) => ({ type: e.type, vt: e.vt, midi: e.midi, vel: e.vel, x: e.x, ring: e.ring, final: e.final, balls: e.balls, k: e.k }));
+    s.events = t.log.map((e) => ({ type: e.type, vt: e.vt, midi: e.midi, vel: e.vel, x: e.x, ring: e.ring, final: e.final, balls: e.balls, k: e.k, len: e.len }));
     s.fps = t.o.fps;
     return s;
   }

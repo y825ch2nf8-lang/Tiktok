@@ -65,6 +65,10 @@ Länge oder welcher Hook besser läuft. Diese Erkenntnisse kommen in die Regeln 
   das bringt mehr Likes und Push. 60+ s erst, wenn die Creator Rewards erreichbar sind.
 - **Die ersten 2 Sekunden müssen etwas zeigen:** Die Figur ist groß, das erste Entkommen kommt nach spätestens 3 s
   (`maxFirst`).
+- **Die erste Sekunde entscheidet:** v1 verlor die meisten Zuschauer bei 0:01 (Ø 13,9 s, 0,84 % ganz gesehen). Ab dem
+  ersten Frame muss sich etwas bewegen oder aufbauen. Likes kamen bei 0:04, sobald etwas passierte.
+- **Fäden (`--threads`)** sorgen ab dem ersten Aufprall für ein wachsendes Muster. Dazu passt der Ton „gezupfter Faden“
+  (`--sound asmr` wählt automatisch `string`). Beim Entkommen reißen die Fäden.
 - **Bei wenigen Likes zuerst die Analytics anfordern:** durchschnittliche Wiedergabezeit und „Gesamtes Video angesehen“
   in Prozent. Erst damit lässt sich sagen, wo die Leute abspringen.
 

@@ -61,7 +61,9 @@ Satisfying-Zielgruppe. Empfehlung: eigener Account nur für Simulationen oder ko
 | Datum | Datei | Szene/Figur | Song | Sprache | Views | Likes | Kommentare | Saves | Notiz |
 |---|---|---|---|---|---|---|---|---|---|
 | 05.11. | box1000_korobeiniki_de_seed1 | Box / Katze | Korobeiniki (Song-Aufbau) | DE | | | | | A/B-Paar 1: Song |
-| 05.11. | box1000_cat_asmr-plop_de_seed1 | Box / Katze | ASMR Plopp | DE | 1.973 (1 Std.) | 12 (0,6 %) | 1 | 2 | Hook oben von TikTok-Suchleiste verdeckt, 67 s, Start leer → v2 |
+| 05.11. | box1000_cat_asmr-plop_de_seed1 | Box / Katze | ASMR Plopp | DE | 2,1K (3 Std.) | 12 (0,6 %) | 1 | 2 | **Analytics:** Ø 13,9 s (21 %), ganz gesehen 0,84 %, meiste Absprünge bei 0:01, Like-Spitze bei 0:04, 99,1 % „Für dich“, 0 neue Follower. Hook verdeckt, 67 s, Start leer → v2 |
+| 05.11. | box1000_cat_faden_asmr-string_de_seed24 | Box / Katze + Fäden | ASMR gezupfter Faden | DE | | | | | v3: Fäden ab dem 1. Aufprall, 34 s |
+| 05.11. | box1000_smiley_faden_asmr-string_de_seed2016 | Box / Smiley + Fäden | ASMR gezupfter Faden | DE | | | | | v3 |
 | 05.11. | box1000_cat_asmr-plop_de_seed24 | Box / Katze | ASMR Plopp | DE | | | | | v2: kurz 34 s, Hook tiefer, große Figuren |
 | 05.11. | box1000_cat_korobeiniki_de_seed24 | Box / Katze | Korobeiniki | DE | | | | | v2, A/B-Partner zu seed24 ASMR |
 | 05.11. | box1000_jinglebells_de_seed5002 | Box / Smiley | Jingle Bells (Song-Aufbau) | DE | | | | | A/B-Paar 2: Song |

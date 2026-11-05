@@ -64,6 +64,8 @@
     slowmoScale: 0.35,
     outroDur: 7.0, // Videosekunden nach dem letzten Ring bis Videoende
     maxVideoSec: 120,
+    threads: false, // Fäden von jedem Aufprallpunkt zur Figur
+    maxAnchors: 50,
   };
 
   // Voreinstellungen je Modus (überschreibbar). 'double' wächst exponentiell -> kurze Clips.
@@ -195,6 +197,8 @@
         }
         if (this.collide(b, ring, t)) {
           b.out = true;
+          b.outT = t;
+          b.anchors = null; // Fäden reißen beim Entkommen
           this.inside--;
           this.escapes++;
           spawn += 2;
@@ -212,6 +216,7 @@
             ring.alive = false;
             ring.breakT = t;
             this.cur = 1;
+            this.snapThreads(0);
             this.gen++;
             this.events.push({ type: 'break', t, ring: 0, x: o.cx, y: o.cy, balls: this.inside, final: true });
             // Finale: alle Bälle explodieren nach außen
@@ -267,6 +272,18 @@
         b.vx *= o.maxSpeed / sp;
         b.vy *= o.maxSpeed / sp;
       }
+      // Kontaktpunkt an der Wand (für Fäden + Tonhöhe). Ändert die Physik nicht.
+      const px = b.x - nx * this.br;
+      const py = b.y - ny * this.br;
+      b.len = b.hx == null ? 0 : Math.hypot(px - b.hx, py - b.hy);
+      b.hx = px;
+      b.hy = py;
+      if (o.threads) {
+        // Winkel im mitdrehenden System des Rings speichern -> Fäden drehen sich mit der Arena
+        if (!b.anchors) b.anchors = [];
+        b.anchors.push({ a: Math.atan2(py - o.cy, px - o.cx) - ring.omega * this.t, r: Math.hypot(px - o.cx, py - o.cy), ring: ring.i, t: this.t });
+        if (b.anchors.length > o.maxAnchors) b.anchors.shift();
+      }
       this.onHit(b, -vn, ring);
     }
 
@@ -285,6 +302,7 @@
         x: b.x,
         y: b.y,
         ring: ring.i,
+        len: b.len || 0,
       });
     }
 
@@ -346,9 +364,14 @@
       return false;
     }
 
+    snapThreads(ringIdx) {
+      for (const b of this.balls) if (b.anchors) b.anchors = b.anchors.filter((an) => an.ring !== ringIdx);
+    }
+
     breakRing(escaper) {
       const o = this.o;
       const ring = this.rings[this.cur];
+      this.snapThreads(ring.i);
       ring.alive = false;
       ring.breakT = this.t;
       this.cur++;

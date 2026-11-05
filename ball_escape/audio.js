@@ -403,7 +403,33 @@ function sliceFrom(buf, skipSec) {
 
 // Welche Figur welches Aufprall-Geräusch bekommt
 const ASMR_FOR_SKIN = { smiley: 'boing', cat: 'plop', egg: 'crack', neon: 'glass' };
-const ASMR_KINDS = ['boing', 'plop', 'crack', 'glass', 'click', 'marble', 'pop'];
+const ASMR_KINDS = ['boing', 'plop', 'crack', 'glass', 'click', 'marble', 'pop', 'string'];
+// Gezupfter Faden: Länge -> Tonhöhe (lang = tief), auf eine Pentatonik gerastert, damit nichts schräg klingt
+const PENTA = [0, 3, 5, 7, 10];
+function stringFreq(len) {
+  const x = Math.max(0, Math.min(1, (len - 40) / 820));
+  const steps = Math.round((1 - x) * 14); // 14 Pentatonik-Stufen ≈ knapp 3 Oktaven
+  const semis = Math.floor(steps / 5) * 12 + PENTA[steps % 5];
+  return hz(52 + semis); // ab E3
+}
+function stringPluck(freq, seed) {
+  const n = Math.floor(0.9 * SR);
+  const out = new Float32Array(n);
+  const N = Math.max(2, Math.round(SR / freq));
+  const buf = new Float32Array(N);
+  const r = mulberry32(seed);
+  let lp = 0;
+  for (let i = 0; i < N; i++) { lp += 0.35 * (r() * 2 - 1 - lp); buf[i] = lp; }
+  let body = 0;
+  for (let i = 0; i < n; i++) {
+    const j = i % N;
+    const y = buf[j];
+    buf[j] = 0.5 * (y + buf[(j + 1) % N]) * 0.994;
+    body += 0.25 * (y - body); // weicher Klang, kein spitzes Zirpen
+    out[i] = body * 2.2 * (i > n - 2400 ? (n - i) / 2400 : 1);
+  }
+  return out;
+}
 
 function synth(dur, fn) {
   const n = Math.floor(dur * SR);
@@ -504,7 +530,7 @@ function renderAsmr(events, durationSec, opts) {
     if (e.type === 'note') {
       const pitch = Math.pow(2, (rng() * 6 - 3) / 12);
       const g = 0.5 * e.vel;
-      const h = asmrHit(kind, pitch, rng);
+      const h = kind === 'string' ? stringPluck(stringFreq(e.len || 400), Math.floor(rng() * 1e9)) : asmrHit(kind, pitch, rng);
       dry.add(e.vt, h, g, panOf(e.x));
       send.add(e.vt, h, g * 0.25, panOf(e.x));
     } else if (e.type === 'escape') {
@@ -534,7 +560,7 @@ function renderAsmr(events, durationSec, opts) {
       fin.add(e.vt, c, 0.4, 0.2);
     }
   }
-  if (opts.loopChimeAt != null) dry.add(opts.loopChimeAt, asmrHit(kind, 1, rng), 0.4, 0);
+  if (opts.loopChimeAt != null) dry.add(opts.loopChimeAt, kind === 'string' ? stringPluck(stringFreq(300), 7) : asmrHit(kind, 1, rng), 0.4, 0);
 
   const [wl, wr] = reverb(send.L, send.R, n);
   const L = dry.L;

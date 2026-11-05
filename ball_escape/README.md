@@ -85,12 +85,22 @@ node ball_escape/render.js --scene box --skin cat --melody korobeiniki --waterma
 | Meilenstein | „Level-up“-Ding, jede Stufe einen Halbton höher; im Bild steht „LEVEL 5“ |
 | Finale | großer Knall + Crash, danach Stille |
 
-Mit `--asmr click|marble|glass|pop|boing|plop|crack` wählst du ein anderes Aufprall-Geräusch. Der Hook wird zu
+Mit `--asmr click|marble|glass|pop|boing|plop|crack|string` wählst du ein anderes Aufprall-Geräusch. Der Hook wird zu
 „SCHAFFT ER 1.000 BÄLLE?“, die Caption endet mit „Ton an 🔊“.
 
 ```bash
 node ball_escape/render.js --scene box --skin egg --sound asmr
 node ball_escape/render.js --scene box --skin cat --sound asmr --asmr click
+```
+
+### Fäden (`--threads`)
+
+Bei jedem Aufprall spannt sich ein Faden vom Aufprallpunkt an der Wand zur Figur. Die Fäden drehen sich mit der Arena,
+das Netz wird mit jeder Stufe dichter. Beim Entkommen reißen sie. Im ASMR-Modus klingt jeder Aufprall wie ein gezupfter
+Faden: lange Fäden tief, kurze hoch, auf eine Pentatonik gerastert, damit nichts schräg klingt.
+
+```bash
+node ball_escape/render.js --scene box --skin cat --sound asmr --threads
 ```
 
 **A/B-Test:** Mit demselben `--seed` und `--skin` ist der Ablauf identisch, nur der Ton und der Hook unterscheiden sich.
