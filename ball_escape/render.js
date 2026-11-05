@@ -8,6 +8,7 @@
  *   node ball_escape/render.js --mode double --target 25 --melody ode
  *   node ball_escape/render.js --seed 11 --seconds 10
  *   node ball_escape/render.js --melody korobeiniki,turca,hummelflug   # Serie: ein Video pro Song
+ *   node ball_escape/render.js --music bounce          # ohne Song-Aufbau, nur Aufprall-Noten
  *   node ball_escape/render.js --serve               # Live-Vorschau im Browser (http://localhost:8080)
  */
 'use strict';
@@ -40,6 +41,7 @@ function parseArgs(argv) {
     crf: 17,
     hook: null,
     seedStart: 1,
+    music: 'layers',
   };
   for (let i = 2; i < argv.length; i++) {
     const k = argv[i].replace(/^--/, '');
@@ -52,7 +54,7 @@ function parseArgs(argv) {
         a[k] = Number(next()); break;
       case 'seed-start': a.seedStart = Number(next()); break;
       case 'seed': { const v = next(); a.seed = v === 'auto' ? 'auto' : Number(v); break; }
-      case 'mode': case 'melody': case 'out': case 'hook': a[k] = next(); break;
+      case 'mode': case 'melody': case 'out': case 'hook': case 'music': a[k] = next(); break;
       default: throw new Error('Unbekannte Option: ' + argv[i] + ' (siehe --help)');
     }
   }
@@ -82,7 +84,9 @@ function captionFor(a, sum, mel) {
   const rule = a.mode === 'double' ? 'Jeder Ring verdoppelt die Bälle' : 'Jedes Entkommen = +2 Bälle';
   return {
     hook,
-    caption: `${hook} 😳 ${rule}… Erkennst du den Song? 🎵 Schreib ihn in die Kommentare 👇`,
+    caption: a.music === 'bounce'
+      ? `${hook} 😳 ${rule}… Erkennst du den Song? 🎵 Schreib ihn in die Kommentare 👇`
+      : `${hook} 😳 Jeder Ring schaltet ein neues Instrument frei – beim letzten Ring läuft der ganze Song 🎶 Erkennst du ihn? 👇`,
     hashtags: ['#bouncingball', '#satisfying', '#simulation', '#physik', '#oddlysatisfying', '#fyp'],
     pinnedComment: `Auflösung: ${balls} Bälle 🔥 Der Song war „${mel.title}“ 🎵 Welchen Song soll ich als Nächstes nehmen?`,
     answer: balls,
@@ -92,7 +96,7 @@ function captionFor(a, sum, mel) {
 async function main() {
   const a = parseArgs(process.argv);
   if (a.help) {
-    console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(2, 12).join('\n'));
+    console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(2, 14).join('\n'));
     return;
   }
   const server = await serve(a.port);
@@ -133,6 +137,8 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
     mode: a.mode,
     fps: a.fps,
     melody: mel.notes.map((n) => n + mel.transpose),
+    song: melodyName,
+    music: a.music,
   };
   if (a.hook) simOpts.hook = a.hook;
 
@@ -168,7 +174,7 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
     fs.mkdirSync(workDir, { recursive: true });
     const wavPath = path.join(workDir, `audio_seed${seed}.wav`);
     const loopChimeAt = sum.completed && !a.seconds ? dur - 1.4 : null;
-    const pcm = audio.renderAudio(sum.events.filter((e) => e.vt < dur), dur, { seed, tonic: mel.tonic + mel.transpose - 12, chord: mel.chord, loopChimeAt });
+    const pcm = audio.renderAudio(sum.events.filter((e) => e.vt < dur), dur, { seed, tonic: mel.tonic, chord: mel.chord, loopChimeAt, song: Melodies.compile(melodyName), rings: a.rings, music: a.music });
     fs.writeFileSync(wavPath, audio.toWav(pcm));
 
     // 3) Frames -> FFmpeg

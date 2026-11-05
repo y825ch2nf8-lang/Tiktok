@@ -62,3 +62,39 @@ test('Audio: WAV-Header und Länge stimmen', () => {
   assert.strictEqual(wav.readUInt32LE(24), 48000);
   assert.strictEqual(wav.length, 44 + 48000 * 4);
 });
+
+const Arrangement = require('../arrangement.js');
+
+test('Songs: Melodie und Akkorde gleich lang, alle kompilierbar', () => {
+  for (const key of Object.keys(Melodies.SONGS)) {
+    const s = Melodies.compile(key);
+    assert.ok(s.notes.length > 10, key);
+    assert.ok(s.loopBeats % s.meter === 0, `${key}: Loop endet nicht auf Taktgrenze`);
+  }
+});
+
+test('Jeder Ring schaltet Instrumente frei, der letzte Ring den letzten Layer', () => {
+  for (const n of [6, 12, 24]) {
+    const all = [];
+    for (let r = 0; r < n; r++) all.push(...Arrangement.layersForRing(r, n));
+    assert.strictEqual(all.length, Arrangement.LAYERS.length, `n=${n}`);
+    assert.ok(Arrangement.layersForRing(0, n).length >= 1);
+    assert.ok(Arrangement.layersForRing(n - 1, n).some((l) => l.id === 'harmony'));
+  }
+});
+
+test('Layer-Audio: vor dem ersten Ring nur Aufprall-Noten, danach mehr Instrumente', () => {
+  const song = Melodies.compile('korobeiniki');
+  const events = [
+    { type: 'note', vt: 0.2, midi: 76, vel: 1, x: 540 },
+    { type: 'break', vt: 1.0, ring: 0, x: 540 },
+    { type: 'break', vt: 2.0, ring: 1, x: 540 },
+  ];
+  const pcm = audio.renderAudio(events, 4, { song, rings: 12 });
+  const rms = (a, b) => {
+    let s = 0;
+    for (let i = Math.floor(a * 48000); i < b * 48000; i++) s += pcm.L[i] ** 2;
+    return Math.sqrt(s / ((b - a) * 48000));
+  };
+  assert.ok(rms(1.3, 1.9) > rms(0.6, 0.95) * 2, 'Beat setzt beim ersten Ring ein');
+});

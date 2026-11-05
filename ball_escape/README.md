@@ -44,6 +44,7 @@ Das Ergebnis landet in `output/finished/`:
 |---|---|---|
 | `--rings N` | `12` | Anzahl Ringe (Hook passt sich an: „Kann der Ball N Ringe zerstören?“) |
 | `--mode plus2\|double` | `plus2` | `plus2`: +2 Bälle je Ring (~60 s). `double`: Bälle verdoppeln sich, endet mit 4.096 Bällen; ca. 25 s, gut für Shorts/Reels |
+| `--music layers\|bounce` | `layers` | `layers`: jeder Ring = neues Instrument (siehe unten). `bounce`: nur Aufprall-Noten |
 | `--melody NAME[,NAME…]` | `bergkoenig` | Song (siehe Liste unten). Mehrere mit Komma = **Serie**, ein Video pro Song mit eigenem Seed |
 | `--seed N\|auto` | `auto` | `auto` sucht einen Seed, bei dem der letzte Ring bei `--target` Sekunden bricht |
 | `--target S` / `--tol S` | `60` / `2` | Zielzeit des Finales (bei `double`: 25) |
@@ -59,9 +60,24 @@ Jeder Seed ergibt einen anderen Ablauf.
 **Serie / Teil 2:** `--rings 24 --target 75`. Der End-Screen zeigt automatisch „Teil 2: 24 Ringe“.
 Bei mehr Ringen dauert die Suche länger, dann ggf. `--tol 4` setzen.
 
+## Song-Aufbau: ein Instrument pro Ring
+
+Standardmäßig (`--music layers`) baut sich der Song mit den Ringen auf:
+
+- **Vor dem ersten Ring** spielt jeder Aufprall die nächste Melodie-Note. So erkennt man den Song schon früh.
+- **Ab dem ersten Ring** läuft der Song im Takt und die Ringe pulsieren mit dem Beat. Jeder zerbrochene Ring schaltet ein
+  Instrument frei, im Bild steht dann z. B. „+ Bass“:
+
+  Beat → Melodie → Bass → Hi-Hats → Synth-Flächen → Clap → Arpeggio → Lead-Synth → Glocken → Percussion → Sub & Stabs → Harmonie
+
+- **Beim letzten Ring** läuft der ganze Song („+ Harmonie = ganzer Song!“) und blendet zum Loop hin aus.
+
+Bei mehr oder weniger als 12 Ringen werden die Instrumente gleichmäßig verteilt. Der letzte Ring macht den Song immer komplett.
+Mit `--music bounce` bekommst du den alten Stil zurück, bei dem nur die Aufprall-Noten spielen.
+
 ## Songs
 
-Alle gemeinfrei (Komponist > 70 Jahre tot bzw. Volkslied), als eigene Notenliste in `melodies.js`:
+Alle gemeinfrei (Komponist > 70 Jahre tot bzw. Volkslied), selbst arrangiert in `melodies.js` (Melodie mit Rhythmus, Akkorde, Tempo):
 
 | Name | Song | Gut für |
 |---|---|---|
@@ -101,7 +117,8 @@ node ball_escape/render.js --melody korobeiniki,turca,hummelflug,jinglebells,toc
 |---|---|
 | `sim.js` | deterministische Physik (Ringe, Lücken, Kollisionen, Ringbruch, Zeitlupe, Seed-Suche). Läuft in Node und im Browser |
 | `renderer.js` | Canvas-Zeichnung: Neon-Ringe, Bloom, Trails, Splitter, Funken, Screen-Shake, Texte, Outro/Loop |
-| `audio.js` | Ton aus dem Event-Log: Marimba-Noten, Glasbruch, Finale, Hall, Limiter → WAV |
+| `audio.js` | Synthesizer: Kick, Clap, Hats, Bass, Pads, Arp, Lead, Glocken … + Sidechain, Hall, Limiter → WAV |
+| `arrangement.js` | welcher Ring welches Instrument freischaltet + Notenplan pro Instrument |
 | `melodies.js` | gemeinfreie Melodien als Notenlisten (eigene leicht ergänzbar) |
 | `render.js` | CLI: Seed suchen → Audio → Frames (Headless-Chromium) → FFmpeg → MP4 + Caption |
 | `index.html` | Live-Vorschau im Browser |

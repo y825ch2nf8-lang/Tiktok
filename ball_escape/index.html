@@ -53,6 +53,7 @@
 </div>
 <script src="sim.js"></script>
 <script src="melodies.js"></script>
+<script src="arrangement.js"></script>
 <script src="renderer.js"></script>
 <script>
 (async () => {
@@ -70,7 +71,7 @@
 
   function opts() {
     const mel = Melodies.get($('melody').value);
-    return { seed: +$('seed').value, rings: +$('rings').value, mode: $('mode').value,
+    return { seed: +$('seed').value, rings: +$('rings').value, mode: $('mode').value, song: $('melody').value,
              melody: mel.notes.map((n) => n + mel.transpose) };
   }
   function restart() { info = BE.setup(opts()); frame = 0; BE.renderFrame(0); show(); }
