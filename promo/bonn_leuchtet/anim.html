@@ -10,8 +10,9 @@ canvas{display:block}
 </style></head><body>
 <canvas id="c" width="1080" height="1920"></canvas>
 <script>
-const W=1080,H=1920,DUR=23;
-const c=document.getElementById('c'),x=c.getContext('2d');
+const FEED=new URLSearchParams(location.search).has('feed');
+const W=1080,H=FEED?1350:1920,DUR=23;
+const c=document.getElementById('c');c.height=H;const x=c.getContext('2d');
 const EMO='"Noto Color Emoji"';
 const img={};
 function load(n){return new Promise(r=>{const i=new Image();i.onload=()=>{img[n]=i;r()};i.src='img/'+n+'.jpg'})}
@@ -185,7 +186,9 @@ function s5(t,A){ // 18.4-23 outro
 function render(t){
   x.clearRect(0,0,W,H);bg(t);
   const sc=[[s1,0,4.4],[s2,3.8,9.0],[s3,8.4,14.2],[s4,13.6,18.9],[s5,18.4,DUR+1]];
+  x.save();if(FEED){x.translate(W/2,H/2);x.scale(.8,.8);x.translate(-540,-975)}
   for(const [f,a,b] of sc){const v=t<1&&a===0?1:vis(t,a,b,.6);if(v>0)f(t,v)}
+  x.restore();
   // global fade in/out
   const g=cl(Math.min(t/.5,(DUR-t)/.8));if(g<1){x.fillStyle=`rgba(5,5,12,${1-g})`;x.fillRect(0,0,W,H)}
   // soft vignette
