@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ball Escape Vorschau</title>
+<style>
+  :root { --bg: #05070d; --panel: #0e121c; --text: #e8edf5; --muted: #8a96aa; --accent: #ffd60a; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
+  body.render { background: #000; }
+  body.render #ui { display: none; }
+  body.render #stage { position: absolute; left: 0; top: 0; }
+  #wrap { display: flex; gap: 20px; height: 100%; padding: 16px; box-sizing: border-box; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
+  #stage { height: calc(100vh - 32px); max-width: 100%; aspect-ratio: 9 / 16; background: #000; border-radius: 12px; }
+  body.render #stage { height: auto; border-radius: 0; }
+  #ui { width: 280px; background: var(--panel); border-radius: 12px; padding: 16px; display: grid; gap: 10px; }
+  #ui h1 { font-size: 16px; margin: 0 0 4px; }
+  label { display: grid; gap: 4px; color: var(--muted); font-size: 12px; }
+  input, select, button { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid #253048; background: #151b28; color: var(--text); }
+  button { cursor: pointer; }
+  button.primary { background: var(--accent); color: #000; border: 0; font-weight: 700; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  #stats { font: 12px/1.5 ui-monospace, monospace; color: var(--muted); white-space: pre-wrap; }
+  @media (max-width: 700px) { #stage { height: auto; width: 100%; } #ui { width: 100%; } }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="stage" width="1080" height="1920"></canvas>
+  <div id="ui">
+    <h1>Ball Escape – Vorschau</h1>
+    <label>Seed <input id="seed" type="number" value="11" min="1"></label>
+    <div class="row">
+      <label>Ringe <input id="rings" type="number" value="12" min="2" max="30"></label>
+      <label>Modus
+        <select id="mode"><option value="plus2">+2 Bälle</option><option value="double">×2 verdoppeln</option></select>
+      </label>
+    </div>
+    <label>Melodie
+      <select id="melody"><option value="bergkoenig">Halle des Bergkönigs</option><option value="ode">Ode an die Freude</option><option value="elise">Für Elise</option></select>
+    </label>
+    <div class="row">
+      <button class="primary" id="play">▶ Start (mit Ton)</button>
+      <button id="pause">Pause</button>
+    </div>
+    <div class="row">
+      <button id="random">Zufalls-Seed</button>
+      <button id="search">~60 s suchen</button>
+    </div>
+    <div id="stats"></div>
+  </div>
+</div>
+<script src="sim.js"></script>
+<script src="melodies.js"></script>
+<script src="renderer.js"></script>
+<script>
+(async () => {
+  const params = new URLSearchParams(location.search);
+  const isRender = params.get('mode') === 'render';
+  if (isRender) document.body.classList.add('render');
+  await BE.loadFonts();
+  window.BE.ready = true;
+  if (isRender) return; // Steuerung übernimmt render.js (Playwright)
+
+  const $ = (id) => document.getElementById(id);
+  const stats = $('stats');
+  let frame = 0, running = false, last = 0, acc = 0, info = null, actx = null, master = null;
+
+  function opts() {
+    const mel = Melodies.get($('melody').value);
+    return { seed: +$('seed').value, rings: +$('rings').value, mode: $('mode').value,
+             melody: mel.notes.map((n) => n + mel.transpose) };
+  }
+  function restart() { info = BE.setup(opts()); frame = 0; BE.renderFrame(0); show(); }
+
+  // Live-Ton (WebAudio): Marimba-artige Noten + Glasbruch
+  function audio() {
+    if (actx) return;
+    actx = new AudioContext();
+    master = actx.createDynamicsCompressor();
+    master.connect(actx.destination);
+  }
+  function note(midi, vel) {
+    const t = actx.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    [[1, 0.6, 0.55], [3.98, 0.2, 0.06], [9.9, 0.06, 0.012]].forEach(([m, g, d]) => {
+      const osc = actx.createOscillator(), gn = actx.createGain();
+      osc.frequency.value = f * m; gn.gain.setValueAtTime(0, t);
+      gn.gain.linearRampToValueAtTime(g * vel * 0.5, t + 0.003);
+      gn.gain.exponentialRampToValueAtTime(1e-4, t + d * 6);
+      osc.connect(gn).connect(master); osc.start(t); osc.stop(t + d * 6 + 0.05);
+    });
+  }
+  function shatter(final) {
+    const t = actx.currentTime, len = final ? 1.2 : 0.4;
+    const buf = actx.createBuffer(1, actx.sampleRate * len, actx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (actx.sampleRate * len * 0.25));
+    const src = actx.createBufferSource(), hp = actx.createBiquadFilter(), g = actx.createGain();
+    hp.type = 'highpass'; hp.frequency.value = final ? 600 : 2500; g.gain.value = final ? 0.6 : 0.35;
+    src.buffer = buf; src.connect(hp).connect(g).connect(master); src.start(t);
+  }
+
+  function show() {
+    const i = BE.info();
+    stats.textContent = `Zeit   ${(frame / 60).toFixed(1)} s\nBälle  ${i.balls}\nRinge  ${i.breaks.length}/${info.rings} zerstört` +
+      (i.finalFrame > 0 ? `\nFinale ${(i.finalFrame / 60).toFixed(1)} s\nLänge  ${(i.totalFrames / 60).toFixed(1)} s` : '');
+  }
+  function loop(ts) {
+    if (!running) return;
+    acc += Math.min(0.1, (ts - (last || ts)) / 1000); last = ts;
+    while (acc >= 1 / 60) {
+      acc -= 1 / 60;
+      const i = BE.info();
+      if (frame + 1 >= i.totalFrames) { running = false; break; }
+      frame++;
+      const evs = BE.renderFrame(frame);
+      if (actx) for (const e of evs) e.type === 'note' ? note(e.midi, e.vel) : shatter(e.final);
+    }
+    show();
+    requestAnimationFrame(loop);
+  }
+
+  $('play').onclick = () => { audio(); restart(); running = true; last = 0; acc = 0; requestAnimationFrame(loop); };
+  $('pause').onclick = () => { running = !running; $('pause').textContent = running ? 'Pause' : 'Weiter'; if (running) { last = 0; requestAnimationFrame(loop); } };
+  $('random').onclick = () => { $('seed').value = 1 + Math.floor(Math.random() * 99999); restart(); };
+  $('search').onclick = () => {
+    stats.textContent = 'Suche Seed …';
+    setTimeout(() => {
+      const o = opts();
+      const r = BE.findSeed(Object.assign(o, { target: o.mode === 'double' ? 25 : 60, start: +$('seed').value + 1 }));
+      if (r) $('seed').value = r.seed;
+      restart();
+    }, 30);
+  };
+  ['rings', 'mode', 'melody', 'seed'].forEach((id) => $(id).addEventListener('change', restart));
+  restart();
+})();
+</script>
+</body>
+</html>

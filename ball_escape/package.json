@@ -1,0 +1,16 @@
+{
+  "name": "ball-escape",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Satisfying 'Kann der Ball entkommen?' Physik-Videos für TikTok/Reels/Shorts rendern",
+  "main": "render.js",
+  "scripts": {
+    "render": "node render.js",
+    "draft": "node render.js --draft",
+    "preview": "node render.js --serve",
+    "test": "node --test tests/sim.test.js"
+  },
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}

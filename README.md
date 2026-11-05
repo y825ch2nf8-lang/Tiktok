@@ -208,4 +208,5 @@ src/
   video_editor.py       FFmpeg: Shots, Zoom/Pan, Übergänge, Grading
   exporter.py           Dateinamen, Verifikation, Metadaten
 assets/ data/ output/   Eingaben, Beispieldaten, Ergebnisse
+ball_escape/            Satisfying-Physik-Videos „Kann der Ball 12 Ringe zerstören?“ (Node, siehe ball_escape/README.md)
 ```
