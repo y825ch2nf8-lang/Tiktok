@@ -398,8 +398,175 @@ function sliceFrom(buf, skipSec) {
   return buf.subarray(s);
 }
 
+
+/* ---------------- ASMR-Modus: Geräusche statt Musik ---------------- */
+
+// Welche Figur welches Aufprall-Geräusch bekommt
+const ASMR_FOR_SKIN = { smiley: 'boing', cat: 'plop', egg: 'crack', neon: 'glass' };
+const ASMR_KINDS = ['boing', 'plop', 'crack', 'glass', 'click', 'marble', 'pop'];
+
+function synth(dur, fn) {
+  const n = Math.floor(dur * SR);
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) out[i] = fn(i / SR, i);
+  return out;
+}
+
+function asmrHit(kind, pitch, rng) {
+  // pitch: Faktor um die Grundfrequenz (leichte Variation pro Aufprall)
+  const r = mulberry32(Math.floor(rng() * 1e9));
+  let ph = 0;
+  switch (kind) {
+    case 'boing': {
+      const f0 = 330 * pitch;
+      return synth(0.32, (t) => {
+        const f = f0 * (1 + 0.55 * Math.exp(-t / 0.025)) * (1 + 0.07 * Math.sin(TAU * 26 * t) * Math.exp(-t / 0.12));
+        ph += (TAU * f) / SR;
+        return Math.sin(ph) * Math.exp(-t / 0.11) * Math.min(1, t / 0.002);
+      });
+    }
+    case 'plop': {
+      const f0 = 210 * pitch;
+      let lp = 0;
+      return synth(0.16, (t) => {
+        const f = f0 * (0.75 + 0.55 * (1 - Math.exp(-t / 0.018)));
+        ph += (TAU * f) / SR;
+        lp += 0.05 * (r() * 2 - 1 - lp);
+        return (Math.sin(ph) * Math.exp(-t / 0.045) + lp * 1.5 * Math.exp(-t / 0.01)) * Math.min(1, t / 0.0015);
+      });
+    }
+    case 'pop': {
+      const f0 = 520 * pitch;
+      return synth(0.1, (t) => {
+        const f = f0 * (0.6 + 0.9 * (1 - Math.exp(-t / 0.012)));
+        ph += (TAU * f) / SR;
+        return Math.sin(ph) * Math.exp(-t / 0.03) * Math.min(1, t / 0.001) + (r() * 2 - 1) * 0.3 * Math.exp(-t / 0.0015);
+      });
+    }
+    case 'crack': {
+      const fs = [1750, 2900, 4300].map((f) => f * pitch * (0.92 + r() * 0.16));
+      return synth(0.09, (t) => {
+        let s = (r() * 2 - 1) * 0.9 * Math.exp(-t / 0.0025);
+        fs.forEach((f, k) => (s += (0.5 / (k + 1)) * Math.sin(TAU * f * t) * Math.exp(-t / (0.022 / (k + 1)))));
+        return s;
+      });
+    }
+    case 'glass': {
+      const f0 = 1900 * pitch;
+      return synth(0.6, (t) => (Math.sin(TAU * f0 * t) * Math.exp(-t / 0.22) + 0.35 * Math.sin(TAU * f0 * 2.76 * t) * Math.exp(-t / 0.08)) * Math.min(1, t / 0.001));
+    }
+    case 'click': {
+      // mechanische Tastatur: Klick + "Thock" + leiser Release
+      const f0 = 170 * pitch;
+      let hp = 0;
+      let prev = 0;
+      return synth(0.11, (t) => {
+        const x = r() * 2 - 1;
+        hp = 0.6 * (hp + x - prev);
+        prev = x;
+        const rel = t > 0.045 ? 0.35 * hp * Math.exp(-(t - 0.045) / 0.002) : 0;
+        return hp * Math.exp(-t / 0.0025) + Math.sin(TAU * f0 * t) * 0.8 * Math.exp(-t / 0.022) + rel;
+      });
+    }
+    case 'marble':
+    default: {
+      const fs = [2500, 4100, 900].map((f) => f * pitch);
+      return synth(0.08, (t) => Math.sin(TAU * fs[0] * t) * Math.exp(-t / 0.008) + 0.6 * Math.sin(TAU * fs[1] * t) * Math.exp(-t / 0.005) + 0.5 * Math.sin(TAU * fs[2] * t) * Math.exp(-t / 0.02));
+    }
+  }
+}
+
+function levelUp(midiBase) {
+  // zwei schnelle Glockentöne nach oben (Quinte) wie im Game
+  const a = bell(hz(midiBase), 0.05);
+  const b = bell(hz(midiBase + 7), 0.2);
+  const off = Math.floor(0.07 * SR);
+  const out = new Float32Array(Math.max(a.length, b.length + off));
+  for (let i = 0; i < a.length; i++) out[i] += a[i];
+  for (let i = 0; i < b.length; i++) out[i + off] += b[i];
+  return out;
+}
+
+function renderAsmr(events, durationSec, opts) {
+  const n = Math.ceil(durationSec * SR);
+  const dry = new Bus(n);
+  const send = new Bus(n);
+  const fin = new Bus(n); // Finale separat, damit der Knall nicht den restlichen Pegel drückt
+  const rng = mulberry32((opts.seed || 1) * 104729);
+  const width = opts.width || 1080;
+  const kind = ASMR_KINDS.includes(opts.asmr) ? opts.asmr : ASMR_FOR_SKIN[opts.skin] || 'pop';
+  const goal = opts.goal || 1000;
+  const panOf = (x) => Math.max(-0.7, Math.min(0.7, ((x == null ? width / 2 : x) / width) * 2 - 1)) * 0.7;
+  let lastEscape = -1;
+  let level = 0;
+  for (const e of events) {
+    if (e.vt >= durationSec) continue;
+    if (e.type === 'note') {
+      const pitch = Math.pow(2, (rng() * 6 - 3) / 12);
+      const g = 0.5 * e.vel;
+      const h = asmrHit(kind, pitch, rng);
+      dry.add(e.vt, h, g, panOf(e.x));
+      send.add(e.vt, h, g * 0.25, panOf(e.x));
+    } else if (e.type === 'escape') {
+      if (e.vt - lastEscape < 1 / 12) continue; // nicht mehr als ~12 Pops pro Sekunde
+      lastEscape = e.vt;
+      // Pop wird mit steigender Ballzahl höher (2 Oktaven bis zum Ziel) -> Spannung
+      const semis = (24 * Math.log(Math.max(1, e.balls || 1))) / Math.log(goal);
+      const h = asmrHit('pop', Math.pow(2, semis / 12), rng);
+      dry.add(e.vt, h, 0.35, panOf(e.x));
+      send.add(e.vt, h, 0.1, panOf(e.x));
+    } else if (e.type === 'stage' || (e.type === 'break' && opts.scene !== 'box')) {
+      if (e.type === 'break' && e.final) continue; // Finale unten
+      if (e.type === 'stage' && e.final) continue;
+      const lu = levelUp(76 + level);
+      level++;
+      dry.add(e.vt, lu, 0.22, 0);
+      send.add(e.vt, lu, 0.2, 0);
+      if (e.type === 'break') {
+        const g = glass(e.ring, rng, false);
+        dry.add(e.vt, g, 0.3, 0);
+      }
+    }
+    if (e.type === 'break' && e.final) {
+      const g = glass(e.ring || 0, rng, true);
+      fin.add(e.vt, g, 1, 0);
+      const c = crash();
+      fin.add(e.vt, c, 0.4, 0.2);
+    }
+  }
+  if (opts.loopChimeAt != null) dry.add(opts.loopChimeAt, asmrHit(kind, 1, rng), 0.4, 0);
+
+  const [wl, wr] = reverb(send.L, send.R, n);
+  const L = dry.L;
+  const R = dry.R;
+  for (let i = 0; i < n; i++) {
+    L[i] += wl[i] * 0.5;
+    R[i] += wr[i] * 0.5;
+  }
+  // Pegel: Geräusche sind spärlich -> nur hörbare Samples zählen; Aufprall-Spitzen auf ~0.55
+  const sample = [];
+  for (let i = 0; i < n; i += 7) {
+    const a = Math.max(Math.abs(L[i]), Math.abs(R[i]));
+    if (a > 1e-4) sample.push(a);
+  }
+  sample.sort((x, y) => x - y);
+  const p = sample.length ? sample[Math.floor(sample.length * 0.998)] : 1;
+  const g = 0.55 / Math.max(p, 1e-6);
+  let finPeak = 0;
+  for (let i = 0; i < n; i++) finPeak = Math.max(finPeak, Math.abs(fin.L[i]), Math.abs(fin.R[i]));
+  const gf = finPeak > 0 ? 0.9 / finPeak : 0;
+  const fadeLen = Math.floor(0.05 * SR);
+  for (let i = 0; i < n; i++) {
+    const f = i > n - fadeLen ? (n - i) / fadeLen : 1;
+    L[i] = Math.tanh(L[i] * g + fin.L[i] * gf) * f;
+    R[i] = Math.tanh(R[i] * g + fin.R[i] * gf) * f;
+  }
+  return { L, R, sampleRate: SR };
+}
+
 function renderAudio(events, durationSec, opts) {
   opts = opts || {};
+  if (opts.music === 'asmr') return renderAsmr(events, durationSec, opts);
   const n = Math.ceil(durationSec * SR);
   const dry = new Bus(n);
   const send = new Bus(n);
@@ -551,4 +718,4 @@ function toWav({ L, R, sampleRate }) {
   return buf;
 }
 
-module.exports = { renderAudio, toWav, SR };
+module.exports = { renderAudio, toWav, SR, ASMR_KINDS, ASMR_FOR_SKIN };

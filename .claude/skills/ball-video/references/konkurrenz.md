@@ -54,3 +54,10 @@ Nicht übernehmen: geschützte Songs (Racery) und fremde Gesichter oder Memes (B
 
 | Datum | Datei | Szene/Figur | Song | Sprache | Views | Likes | Kommentare | Saves | Notiz |
 |---|---|---|---|---|---|---|---|---|---|
+| 05.11. | box1000_korobeiniki_de_seed1 | Box / Katze | Korobeiniki (Song-Aufbau) | DE | | | | | A/B-Paar 1: Song |
+| 05.11. | box1000_cat_asmr-plop_de_seed1 | Box / Katze | ASMR Plopp | DE | | | | | A/B-Paar 1: ASMR |
+| 05.11. | box1000_jinglebells_de_seed5002 | Box / Smiley | Jingle Bells (Song-Aufbau) | DE | | | | | A/B-Paar 2: Song |
+| 05.11. | box1000_smiley_asmr-boing_de_seed5002 | Box / Smiley | ASMR Boing | DE | | | | | A/B-Paar 2: ASMR |
+| 05.11. | box1000_hummelflug_de_seed1011 | Box / Katze | Hummelflug | DE | | | | | |
+| 05.11. | box1000_turca_de_seed6023 | Box / Smiley | Türkischer Marsch | DE | | | | | |
+| 05.11. | box1000_toccata_en_seed9001 | Box / Ei | Toccata | EN | | | | | A/B Sprache |

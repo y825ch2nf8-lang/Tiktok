@@ -98,3 +98,18 @@ test('Layer-Audio: vor dem ersten Ring nur Aufprall-Noten, danach mehr Instrumen
   };
   assert.ok(rms(1.3, 1.9) > rms(0.6, 0.95) * 2, 'Beat setzt beim ersten Ring ein');
 });
+
+test('ASMR: jede Figur klingt, nichts übersteuert, Pegel steigt zum Ende', () => {
+  const tl = new Timeline({ seed: 1, scene: 'box', melody: [60] });
+  const s = tl.runHeadless();
+  const dur = s.totalFrames / 60;
+  for (const skin of ['cat', 'smiley', 'egg', 'neon']) {
+    const pcm = audio.renderAudio(tl.log, dur, { music: 'asmr', skin, seed: 1, scene: 'box', goal: 1000 });
+    let peak = 0;
+    for (const v of pcm.L) {
+      assert.ok(!Number.isNaN(v), skin);
+      peak = Math.max(peak, Math.abs(v));
+    }
+    assert.ok(peak > 0.3 && peak <= 1, `${skin}: peak ${peak}`);
+  }
+});

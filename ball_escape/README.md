@@ -44,6 +44,7 @@ Das Ergebnis landet in `output/finished/`:
 |---|---|---|
 | `--rings N` | `12` | Anzahl Ringe (Hook passt sich an: „Kann der Ball N Ringe zerstören?“) |
 | `--mode plus2\|double` | `plus2` | `plus2`: +2 Bälle je Ring (~60 s). `double`: Bälle verdoppeln sich, endet mit 4.096 Bällen; ca. 25 s, gut für Shorts/Reels |
+| `--sound music\|asmr` | `music` | `asmr`: Geräusche statt Musik (siehe unten) |
 | `--music layers\|bounce` | `layers` | `layers`: jeder Ring = neues Instrument (siehe unten). `bounce`: nur Aufprall-Noten |
 | `--melody NAME[,NAME…]` | `bergkoenig` | Song (siehe Liste unten). Mehrere mit Komma = **Serie**, ein Video pro Song mit eigenem Seed |
 | `--seed N\|auto` | `auto` | `auto` sucht einen Seed, bei dem der letzte Ring bei `--target` Sekunden bricht |
@@ -72,6 +73,27 @@ Weitere Optionen: `--skin smiley|cat|egg|neon` (Figuren statt Bälle), `--lang d
 ```bash
 node ball_escape/render.js --scene box --skin cat --melody korobeiniki --watermark @deinhandle
 ```
+
+## ASMR-Modus: Geräusche statt Musik
+
+`--sound asmr` ersetzt die Musik durch selbst erzeugte Geräusche:
+
+| Moment | Geräusch |
+|---|---|
+| Aufprall | passend zur Figur: Smiley = Boing, Katze = Plopp, Ei = Knack, Neon = Glas-Ting |
+| Entkommen | Bubble-Pop, der mit der Ballzahl immer höher wird (2 Oktaven bis zum Ziel) |
+| Meilenstein | „Level-up“-Ding, jede Stufe einen Halbton höher; im Bild steht „LEVEL 5“ |
+| Finale | großer Knall + Crash, danach Stille |
+
+Mit `--asmr click|marble|glass|pop|boing|plop|crack` wählst du ein anderes Aufprall-Geräusch. Der Hook wird zu
+„SCHAFFT ER 1.000 BÄLLE?“, die Caption endet mit „Ton an 🔊“.
+
+```bash
+node ball_escape/render.js --scene box --skin egg --sound asmr
+node ball_escape/render.js --scene box --skin cat --sound asmr --asmr click
+```
+
+**A/B-Test:** Mit demselben `--seed` und `--skin` ist der Ablauf identisch, nur der Ton und der Hook unterscheiden sich.
 
 ## Song-Aufbau: ein Instrument pro Ring
 

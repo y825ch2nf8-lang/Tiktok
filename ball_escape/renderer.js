@@ -24,6 +24,7 @@
     de: {
       qRings: (n) => `KANN DER BALL ${n} RINGE ZERSTÖREN?`,
       qBox: 'WIE SCHNELL ERKENNST DU DEN SONG?',
+      qBoxAsmr: (n) => `SCHAFFT ER ${n} BÄLLE?`,
       ruleRings: (song, dbl) => (dbl ? '×2 BÄLLE' : '+2 BÄLLE') + (song ? ' & 1 INSTRUMENT PRO RING' : ' BEI JEDEM RING'),
       ruleBox: '+2 BÄLLE BEI JEDEM ENTKOMMEN',
       balls: 'BÄLLE', rings: 'RINGE', goal: 'ZIEL', ballsBang: 'BÄLLE!', fullSong: ' = GANZER SONG!',
@@ -33,6 +34,7 @@
     en: {
       qRings: (n) => `CAN THE BALL BREAK ${n} RINGS?`,
       qBox: 'HOW FAST CAN YOU GUESS THE SONG?',
+      qBoxAsmr: (n) => `CAN IT REACH ${n} BALLS?`,
       ruleRings: (song, dbl) => (dbl ? '×2 BALLS' : '+2 BALLS') + (song ? ' & 1 INSTRUMENT PER RING' : ' EACH RING'),
       ruleBox: '+2 BALLS EACH ESCAPE',
       balls: 'BALLS', rings: 'RINGS', goal: 'GOAL', ballsBang: 'BALLS!', fullSong: ' = FULL SONG!',
@@ -183,7 +185,7 @@
     trails = new Map();
     shake = { t0: -1, dur: 0, amp: 0 };
     flashUntil = -1;
-    song = o.song && o.music !== 'bounce' && window.Melodies ? window.Melodies.compile(o.song) : null;
+    song = o.song && o.music !== 'bounce' && o.music !== 'asmr' && window.Melodies ? window.Melodies.compile(o.song) : null;
     songStart = -1;
     T = TEXT[o.lang] || TEXT.de;
     if (!o.skin) o.skin = 'smiley';
@@ -255,7 +257,11 @@
   function spawnStageFx(ev, vt) {
     // Box-Szene: Meilenstein erreicht -> neues Instrument
     if (songStart < 0) songStart = vt;
-    if (!song) return;
+    if (!song) {
+      // ASMR: Meilenstein = Level-up (passt zum "Ding"-Sound)
+      if (o.music === 'asmr') popups.push({ label: ev.final ? 'LEVEL MAX!' : `LEVEL ${ev.k + 1}`, text: null, t0: vt, hue: ringHue(0, vt), big: ev.final, stage: true });
+      return;
+    }
     const l = window.Arrangement.LAYERS[ev.k];
     popups.push({ label: '+ ' + layerLabel(l) + (ev.final ? T.fullSong : ''), text: null, t0: vt, hue: ringHue(0, vt), big: ev.final, stage: true });
   }
@@ -497,7 +503,7 @@
 
   function hookLines() {
     if (o.hook) return o.hook.split('|');
-    const q = o.scene === 'box' ? T.qBox : T.qRings(o.rings);
+    const q = o.scene === 'box' ? (o.music === 'asmr' ? T.qBoxAsmr(fmt(o.goal)) : T.qBox) : T.qRings(o.rings);
     return wrapLines(q, FONT_IT, 64, 900);
   }
 

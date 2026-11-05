@@ -67,6 +67,9 @@ Länge oder welcher Hook besser läuft. Diese Erkenntnisse kommen in die Regeln 
 - Wasserzeichen mit dem Handle des Nutzers (`--watermark @handle`) gegen Reuploads.
 - Caption: Frage + genau 4 Hashtags (`#satisfyingvideos #bouncingball #relaxing #physics`).
 - A/B-Test Deutsch vs. Englisch (`--lang en`), Zahlen in konkurrenz.md eintragen.
+- **Laufender A/B-Test Song vs. ASMR** (`--sound asmr`): gleicher Seed und gleiche Figur, nur der Ton ist anders.
+  Paare stehen in konkurrenz.md. Gewinnt ASMR bei Views und Watchtime, wird `--sound asmr` der Standard. Ansonsten bleibt
+  der Song-Aufbau. Dafür mindestens 2 Paare auswerten, dann entscheiden.
 
 - Hook als Frage oben im Bild, Regel in einer Zeile darunter. Keine Voiceover-Stimme. *(Recherche Nov 2026)*
 - 61–75 s für TikTok Creator Rewards, 60 fps, 1080×1920. Rechts 140 px und unten 380 px frei lassen für die TikTok-Buttons.

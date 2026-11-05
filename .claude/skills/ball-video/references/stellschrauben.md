@@ -6,6 +6,7 @@
 | Figuren statt Bälle | `--skin smiley\|cat\|egg\|neon`, neue Figur in `skinSprite()` (`renderer.js`) zeichnen |
 | Sprache | `--lang de\|en` (`TEXT` in `renderer.js`, `captionFor()` in `render.js`) |
 | Wasserzeichen | `--watermark @handle` |
+| Geräusche statt Musik | `--sound asmr`, Geräusch-Art `--asmr …`; Klang in `asmrHit()`, Pegel in `renderAsmr()` (`audio.js`) |
 | Anderer Hook-Text | `--hook "Zeile 1\|Zeile 2"`, Standard in `renderer.js` → `hookLines()` / `subLine()` |
 | Schnellerer Start | `findSeed` in `sim.js`: `maxFirst` (Sekunden bis zum ersten Ring) senken |
 | Längere/kürzere Videos | `--target` (Finale-Zeitpunkt), `outroDur` in `sim.js` |
