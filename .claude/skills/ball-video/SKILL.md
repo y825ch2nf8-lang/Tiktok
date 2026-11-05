@@ -59,6 +59,15 @@ Länge oder welcher Hook besser läuft. Diese Erkenntnisse kommen in die Regeln 
 
 ## Gelernte Regeln (immer anwenden, mit Quelle erweitern)
 
+- **Hook nie über y≈250 px.** In der TikTok-App liegt dort die Such-/Tab-Leiste. v1 war verdeckt.
+  *(eigener Screenshot 05.11.: 1.973 Views, aber nur 0,6 % Likes)*
+- **Unter 10K Followern: kurz (`--length short`, ≈34 s, Standard bei Box).** Mehr Leute schauen bis zum Höhepunkt,
+  das bringt mehr Likes und Push. 60+ s erst, wenn die Creator Rewards erreichbar sind.
+- **Die ersten 2 Sekunden müssen etwas zeigen:** Die Figur ist groß, das erste Entkommen kommt nach spätestens 3 s
+  (`maxFirst`).
+- **Bei wenigen Likes zuerst die Analytics anfordern:** durchschnittliche Wiedergabezeit und „Gesamtes Video angesehen“
+  in Prozent. Erst damit lässt sich sagen, wo die Leute abspringen.
+
 - **Standard = `--scene box`** mit Figuren (`--skin cat|smiley|egg`), Zähler bis `--goal 1000`. Die Top-Videos von
   @loopdatcoding und @realracery funktionieren genau so; Videos mit schlichten Bällen liegen weit dahinter.
   *(Screenshots 05.11.2026, siehe konkurrenz.md)*

@@ -50,12 +50,20 @@ Nur belegte Einträge mit Datum und Quelle.
 
 Nicht übernehmen: geschützte Songs (Racery) und fremde Gesichter oder Memes (Bildrechte, Persönlichkeitsrecht).
 
+## Eigener Account
+
+**@techno.logisch („Satisfyer“), 05.11.2026:** 9 Follower, 125 Likes. Ball-Videos: Box-ASMR 1.973 Views, Ringe 779/517.
+Das Profil mischt die Ball-Videos mit anderen Themen (Quiz, Infrarot, Sneaker, Handy). Das bremst Follows aus der
+Satisfying-Zielgruppe. Empfehlung: eigener Account nur für Simulationen oder konsequent bei einem Thema bleiben.
+
 ## Eigene Videos
 
 | Datum | Datei | Szene/Figur | Song | Sprache | Views | Likes | Kommentare | Saves | Notiz |
 |---|---|---|---|---|---|---|---|---|---|
 | 05.11. | box1000_korobeiniki_de_seed1 | Box / Katze | Korobeiniki (Song-Aufbau) | DE | | | | | A/B-Paar 1: Song |
-| 05.11. | box1000_cat_asmr-plop_de_seed1 | Box / Katze | ASMR Plopp | DE | | | | | A/B-Paar 1: ASMR |
+| 05.11. | box1000_cat_asmr-plop_de_seed1 | Box / Katze | ASMR Plopp | DE | 1.973 (1 Std.) | 12 (0,6 %) | 1 | 2 | Hook oben von TikTok-Suchleiste verdeckt, 67 s, Start leer → v2 |
+| 05.11. | box1000_cat_asmr-plop_de_seed24 | Box / Katze | ASMR Plopp | DE | | | | | v2: kurz 34 s, Hook tiefer, große Figuren |
+| 05.11. | box1000_cat_korobeiniki_de_seed24 | Box / Katze | Korobeiniki | DE | | | | | v2, A/B-Partner zu seed24 ASMR |
 | 05.11. | box1000_jinglebells_de_seed5002 | Box / Smiley | Jingle Bells (Song-Aufbau) | DE | | | | | A/B-Paar 2: Song |
 | 05.11. | box1000_smiley_asmr-boing_de_seed5002 | Box / Smiley | ASMR Boing | DE | | | | | A/B-Paar 2: ASMR |
 | 05.11. | box1000_hummelflug_de_seed1011 | Box / Katze | Hummelflug | DE | | | | | |

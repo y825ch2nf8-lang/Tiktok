@@ -49,6 +49,7 @@ function parseArgs(argv) {
     watermark: null,
     goal: 1000,
     sound: 'music',
+    length: null,
     asmr: null,
   };
   for (let i = 2; i < argv.length; i++) {
@@ -62,13 +63,17 @@ function parseArgs(argv) {
         a[k] = Number(next()); break;
       case 'seed-start': a.seedStart = Number(next()); break;
       case 'seed': { const v = next(); a.seed = v === 'auto' ? 'auto' : Number(v); break; }
-      case 'mode': case 'melody': case 'out': case 'hook': case 'music': case 'scene': case 'skin': case 'lang': case 'watermark': case 'sound': case 'asmr': a[k] = next(); break;
+      case 'mode': case 'melody': case 'out': case 'hook': case 'music': case 'scene': case 'skin': case 'lang': case 'watermark': case 'sound': case 'asmr': case 'length': a[k] = next(); break;
       case 'goal': a.goal = Number(next()); break;
       default: throw new Error('Unbekannte Option: ' + argv[i] + ' (siehe --help)');
     }
   }
   if (a.sound === 'asmr') a.music = 'asmr';
-  if (a.target == null) a.target = a.mode === 'double' ? 25 : 60;
+  // Kurz (≈35 s) = mehr Leute schauen bis zum Ende -> mehr Likes & Push. Lang (≈67 s) erst ab 10K Followern
+  // sinnvoll (Creator Rewards). Standard: Box kurz, Ringe lang.
+  if (!a.length) a.length = a.scene === 'box' ? 'short' : 'long';
+  if (a.length === 'short' && a.scene !== 'box') throw new Error('--length short gibt es bisher nur mit --scene box.');
+  if (a.target == null) a.target = a.length === 'short' ? 30 : a.mode === 'double' ? 25 : 60;
   if (a.draft) a.fps = 30;
   return a;
 }
@@ -179,6 +184,8 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
     lang: a.lang,
     goal: a.goal,
   };
+  if (a.length === 'short') Object.assign(simOpts, { boxGapDeg: 70, startSpeed: 900, outroDur: 4.5 });
+  const pacing = a.length === 'short' ? { minFirst: 0.8, maxFirst: 3, maxGap: 6 } : {};
   if (a.skin) simOpts.skin = a.skin;
   if (a.watermark) simOpts.watermark = a.watermark;
   if (a.hook) simOpts.hook = a.hook;
@@ -195,7 +202,7 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
     if (seed === 'auto') {
       process.stdout.write(`Suche Seed (letzter Ring bei ~${a.target} s) … `);
       const t0 = Date.now();
-      const r = await page.evaluate((o) => BE.findSeed(o), Object.assign({}, simOpts, { target: a.target, tol: a.tol, start: seedStart }));
+      const r = await page.evaluate((o) => BE.findSeed(o), Object.assign({}, simOpts, pacing, { target: a.target, tol: a.tol, start: seedStart }));
       if (!r) throw new Error('Kein passender Seed gefunden – andere --target/--tol probieren.');
       seed = r.seed;
       console.log(`Seed ${seed} (Finale ${r.finalSec.toFixed(1)} s${r.approximate ? ', nur ungefähr' : ''}, ${r.tried} getestet, ${((Date.now() - t0) / 1000).toFixed(1)} s)`);

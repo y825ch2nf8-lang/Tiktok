@@ -39,7 +39,7 @@
     width: 1080,
     height: 1920,
     cx: 520, // leicht links: rechts liegt die TikTok-Buttonleiste
-    cy: 880,
+    cy: 930, // tiefer: oben liegt die TikTok-Such-/Tab-Leiste über dem Hook
     rings: 12,
     innerR: 90,
     outerMax: 464,
@@ -81,12 +81,13 @@
       fallGravity: 1500, // entkommene Bälle fallen raus
       startSpeed: 620,
       minBounce: 0,
-      boxR: 440,
+      cy: 950,
+      boxR: 430,
       boxGapDeg: 55,
       boxOmega: 0.7,
       goal: 1000,
-      ballR: 24,
-      ballRMin: 9,
+      ballR: 44, // groß am Anfang, damit die Figur sofort erkennbar ist
+      ballRMin: 8,
       maxBalls: 6000,
     },
   };
@@ -167,7 +168,7 @@
 
     boxRadius() {
       const o = this.o;
-      return Math.max(o.ballRMin, Math.min(o.ballR, o.ballR * Math.pow(Math.max(1, this.inside) / 10, -0.22)));
+      return Math.max(o.ballRMin, Math.min(o.ballR, o.ballR * Math.pow(Math.max(1, this.inside) / 3, -0.3)));
     }
 
     substepBox() {

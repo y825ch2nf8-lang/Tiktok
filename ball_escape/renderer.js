@@ -516,7 +516,8 @@
     if (alpha <= 0) return;
     ctx.globalAlpha = alpha;
     const lines = hookLines();
-    const top = o.scene === 'box' ? 330 - lines.length * 72 : 300 - lines.length * 72;
+    // erste Zeile ab y≈290: darüber liegt in der TikTok-App die Such-/Tab-Leiste
+    const top = (o.scene === 'box' ? 246 : 226) + (2 - lines.length) * 36;
     lines.forEach((ln, i) => outlinedText(ln, 540, top + 64 + i * 72, FONT_IT, 64, 920, '#fff', 10));
     // Regel als weißes Label (gut lesbar, sofort verständlich)
     const rule = ruleText();
@@ -609,7 +610,7 @@
     const pop = 0.85 + 0.15 * ease((since - 0.6) / 0.35);
     ctx.save();
     ctx.globalAlpha = a;
-    ctx.translate(540, 860);
+    ctx.translate(540, o.cy - 20);
     ctx.scale(pop, pop);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
