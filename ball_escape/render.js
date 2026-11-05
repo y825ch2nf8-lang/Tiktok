@@ -7,6 +7,7 @@
  *   node ball_escape/render.js --draft               # schnelle Vorschau (540x960, 30 fps, gleiches Ergebnis)
  *   node ball_escape/render.js --mode double --target 25 --melody ode
  *   node ball_escape/render.js --seed 11 --seconds 10
+ *   node ball_escape/render.js --melody korobeiniki,turca,hummelflug   # Serie: ein Video pro Song
  *   node ball_escape/render.js --serve               # Live-Vorschau im Browser (http://localhost:8080)
  */
 'use strict';
@@ -75,15 +76,15 @@ function serve(port) {
   return new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server)));
 }
 
-function captionFor(a, sum) {
+function captionFor(a, sum, mel) {
   const balls = sum.finalBalls.toLocaleString('de-DE');
   const hook = a.hook ? a.hook.replace('|', ' ') : `Kann der Ball ${a.rings} Ringe zerstören?`;
   const rule = a.mode === 'double' ? 'Jeder Ring verdoppelt die Bälle' : 'Jedes Entkommen = +2 Bälle';
   return {
     hook,
-    caption: `${hook} 😳 ${rule}… Rate in den Kommentaren, wie viele Bälle es am Ende sind 👇`,
+    caption: `${hook} 😳 ${rule}… Erkennst du den Song? 🎵 Schreib ihn in die Kommentare 👇`,
     hashtags: ['#bouncingball', '#satisfying', '#simulation', '#physik', '#oddlysatisfying', '#fyp'],
-    pinnedComment: `Auflösung: ${balls} Bälle 🔥 Teil 2 mit ${a.rings * 2} Ringen?`,
+    pinnedComment: `Auflösung: ${balls} Bälle 🔥 Der Song war „${mel.title}“ 🎵 Welchen Song soll ich als Nächstes nehmen?`,
     answer: balls,
   };
 }
@@ -109,7 +110,24 @@ async function main() {
     process.exit(1);
   }
 
-  const mel = Melodies.get(a.melody);
+  const melodies = a.melody.split(',').map((m) => m.trim()).filter(Boolean);
+  melodies.forEach((m) => Melodies.get(m)); // früh prüfen
+  if (melodies.length > 1 && a.seed !== 'auto') throw new Error('Bei mehreren Melodien bitte --seed auto verwenden.');
+
+  const browser = await chromium.launch();
+  try {
+    for (let idx = 0; idx < melodies.length; idx++) {
+      if (melodies.length > 1) console.log(`\n=== Video ${idx + 1}/${melodies.length}: ${Melodies.get(melodies[idx]).title} ===`);
+      await renderOne(browser, base, a, melodies[idx], a.seedStart + idx * 1000);
+    }
+  } finally {
+    await browser.close();
+    server.close();
+  }
+}
+
+async function renderOne(browser, base, a, melodyName, seedStart) {
+  const mel = Melodies.get(melodyName);
   const simOpts = {
     rings: a.rings,
     mode: a.mode,
@@ -118,11 +136,10 @@ async function main() {
   };
   if (a.hook) simOpts.hook = a.hook;
 
-  const browser = await chromium.launch();
+  const scale = a.draft ? 0.5 : 1;
+  const page = await browser.newPage({ viewport: { width: 1080 * scale, height: 1920 * scale } });
+  page.on('pageerror', (e) => console.error('Browser-Fehler:', e.message));
   try {
-    const scale = a.draft ? 0.5 : 1;
-    const page = await browser.newPage({ viewport: { width: 1080 * scale, height: 1920 * scale } });
-    page.on('pageerror', (e) => console.error('Browser-Fehler:', e.message));
     await page.goto(base + 'index.html?mode=render');
     await page.waitForFunction(() => window.BE && window.BE.ready, null, { timeout: 30000 });
 
@@ -131,7 +148,7 @@ async function main() {
     if (seed === 'auto') {
       process.stdout.write(`Suche Seed (letzter Ring bei ~${a.target} s) … `);
       const t0 = Date.now();
-      const r = await page.evaluate((o) => BE.findSeed(o), Object.assign({}, simOpts, { target: a.target, tol: a.tol, start: a.seedStart }));
+      const r = await page.evaluate((o) => BE.findSeed(o), Object.assign({}, simOpts, { target: a.target, tol: a.tol, start: seedStart }));
       if (!r) throw new Error('Kein passender Seed gefunden – andere --target/--tol probieren.');
       seed = r.seed;
       console.log(`Seed ${seed} (Finale ${r.finalSec.toFixed(1)} s${r.approximate ? ', nur ungefähr' : ''}, ${r.tried} getestet, ${((Date.now() - t0) / 1000).toFixed(1)} s)`);
@@ -156,8 +173,8 @@ async function main() {
 
     // 3) Frames -> FFmpeg
     const date = new Date().toISOString().slice(0, 10);
-    const name = `${date}_ball-escape_${a.rings}ringe_${a.mode}_seed${seed}${a.draft ? '_draft' : ''}`;
-    const outPath = path.resolve(a.out || path.join(ROOT, 'output', 'finished', name + '.mp4'));
+    const name = `${date}_ball-escape_${melodyName}_${a.rings}ringe_${a.mode}_seed${seed}${a.draft ? '_draft' : ''}`;
+    const outPath = path.resolve((a.out && a.melody.indexOf(',') < 0 && a.out) || path.join(ROOT, 'output', 'finished', name + '.mp4'));
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     const ff = spawn('ffmpeg', [
       '-y', '-loglevel', 'error',
@@ -195,7 +212,7 @@ async function main() {
     if (!same) console.warn('WARNUNG: Render weicht von der Simulation ab (Audio evtl. nicht synchron).');
 
     // 5) Caption / Metadaten
-    const cap = captionFor(a, sum);
+    const cap = captionFor(a, sum, mel);
     const meta = Object.assign({ video: path.basename(outPath), seed, rings: a.rings, mode: a.mode, melody: mel.title, durationSec: +dur.toFixed(2), breaks: sum.breaks, finalBalls: sum.finalBalls }, cap);
     const metaPath = outPath.replace(/\.mp4$/, '.json');
     fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
@@ -203,8 +220,7 @@ async function main() {
     console.log(`Fertig: ${outPath}`);
     console.log(`Caption: ${outPath.replace(/\.mp4$/, '.txt')}`);
   } finally {
-    await browser.close();
-    server.close();
+    await page.close();
   }
 }
 

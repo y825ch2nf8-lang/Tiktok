@@ -36,6 +36,52 @@
     E5 D#5 E5 D#5 E5 B4 D5 C5 A4  C4 E4 A4 B4  E4 G#4 B4 C5
     E4 E5 D#5 E5 D#5 E5 B4 D5 C5 A4  C4 E4 A4 B4  E4 C5 B4 A4`);
 
+  // Russisches Volkslied (19. Jh.): Korobeiniki – weltbekannt als Tetris-Melodie (Volksweise, gemeinfrei).
+  const korobeiniki = seq(`
+    E5 B4 C5 D5 C5 B4 A4 A4 C5 E5 D5 C5 B4 B4 C5 D5 E5 C5 A4 A4
+    D5 F5 A5 G5 F5 E5 C5 E5 D5 C5 B4 B4 C5 D5 E5 C5 A4 A4`);
+
+  // Mozart (†1791): Rondo alla Turca („Türkischer Marsch“) – Anfang.
+  const turca = seq(`
+    B4 A4 G#4 A4 C5  D5 C5 B4 C5 E5  F5 E5 D#5 E5 B5 A5 G#5 A5 B5 A5 G#5 A5 C6`);
+
+  // Rimski-Korsakow (†1908): Hummelflug – chromatische Läufe.
+  const hummel = seq(`
+    E5 D#5 D5 C#5 C5 F5 E5 D#5 E5 D#5 D5 C#5 C5 C#5 D5 D#5
+    E5 D#5 D5 C#5 C5 F5 E5 D#5 E5 D#5 D5 C#5 C5 C#5 D5 D#5`);
+
+  // James Lord Pierpont (†1893): Jingle Bells – Refrain.
+  const jingle = seq(`
+    E4 E4 E4 E4 E4 E4 E4 G4 C4 D4 E4
+    F4 F4 F4 F4 F4 E4 E4 E4 E4 D4 D4 E4 D4 G4
+    E4 E4 E4 E4 E4 E4 E4 G4 C4 D4 E4
+    F4 F4 F4 F4 F4 E4 E4 E4 G4 G4 F4 D4 C4`);
+
+  // J. S. Bach (†1750): Toccata und Fuge d-Moll – Anfang.
+  const toccata = seq(`
+    A5 G5 A5 G5 F5 E5 D5 C#5 D5
+    A4 G4 A4 E4 F4 C#4 D4
+    A3 G3 A3 G3 F3 E3 D3 C#3 D3`);
+
+  // Beethoven (†1827): 5. Sinfonie – Schicksalsmotiv.
+  const fuenfte = seq(`
+    G4 G4 G4 Eb4 F4 F4 F4 D4
+    G4 G4 G4 Eb4 Ab4 Ab4 Ab4 G4 Eb5 Eb5 Eb5 C5
+    G4 G4 G4 D4 Ab4 Ab4 Ab4 G4 F5 F5 F5 D5`);
+
+  // Mozart (†1791): Eine kleine Nachtmusik – Anfang.
+  const nacht = seq(`
+    G4 D4 G4 D4 G4 D4 G4 B4 D5  C5 A4 C5 A4 C5 A4 F#4 A4 D4`);
+
+  // Grieg (†1907): Morgenstimmung (Peer Gynt).
+  const morgen = seq(`
+    G4 E4 D4 C4 D4 E4 G4 E4 D4 C4 D4 E4 D4 E4 G4 E4 G4 A4 E4 A4 G4 E4 D4 C4`);
+
+  // Brahms (†1897): Wiegenlied „Guten Abend, gut’ Nacht“.
+  const wiegen = seq(`
+    E4 E4 G4 E4 E4 G4 E4 G4 C5 B4 A4 A4 G4
+    D4 E4 F4 D4 D4 E4 F4 D4 F4 B4 A4 G4 B4 C5`);
+
   const MELODIES = {
     bergkoenig: {
       title: 'In der Halle des Bergkönigs (Grieg)',
@@ -58,6 +104,69 @@
       transpose: 0,
       tonic: midi('A4'),
       chord: [0, 3, 7],
+    },
+    korobeiniki: {
+      title: 'Korobeiniki (Volkslied, bekannt aus Tetris)',
+      notes: [].concat(korobeiniki, korobeiniki, up(korobeiniki, 12)),
+      transpose: 0,
+      tonic: midi('A4'),
+      chord: [0, 3, 7],
+    },
+    turca: {
+      title: 'Türkischer Marsch (Mozart)',
+      notes: [].concat(turca, turca, up(turca, -12)),
+      transpose: 0,
+      tonic: midi('A4'),
+      chord: [0, 3, 7],
+    },
+    hummelflug: {
+      title: 'Hummelflug (Rimski-Korsakow)',
+      notes: [].concat(hummel, up(hummel, 5), hummel, up(hummel, -7)),
+      transpose: 0,
+      tonic: midi('A4'),
+      chord: [0, 3, 7],
+    },
+    jinglebells: {
+      title: 'Jingle Bells (Pierpont)',
+      notes: jingle,
+      transpose: 12,
+      tonic: midi('C4'),
+      chord: [0, 4, 7],
+    },
+    toccata: {
+      title: 'Toccata und Fuge d-Moll (Bach)',
+      notes: toccata,
+      transpose: 0,
+      tonic: midi('D4'),
+      chord: [0, 3, 7],
+    },
+    fuenfte: {
+      title: '5. Sinfonie (Beethoven)',
+      notes: fuenfte,
+      transpose: 12,
+      tonic: midi('C4'),
+      chord: [0, 3, 7],
+    },
+    nachtmusik: {
+      title: 'Eine kleine Nachtmusik (Mozart)',
+      notes: nacht,
+      transpose: 12,
+      tonic: midi('G4'),
+      chord: [0, 4, 7],
+    },
+    morgenstimmung: {
+      title: 'Morgenstimmung (Grieg)',
+      notes: morgen,
+      transpose: 12,
+      tonic: midi('C4'),
+      chord: [0, 4, 7],
+    },
+    wiegenlied: {
+      title: 'Wiegenlied (Brahms)',
+      notes: wiegen,
+      transpose: 12,
+      tonic: midi('C4'),
+      chord: [0, 4, 7],
     },
   };
 

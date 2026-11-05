@@ -38,7 +38,7 @@
       </label>
     </div>
     <label>Melodie
-      <select id="melody"><option value="bergkoenig">Halle des Bergkönigs</option><option value="ode">Ode an die Freude</option><option value="elise">Für Elise</option></select>
+      <select id="melody"></select>
     </label>
     <div class="row">
       <button class="primary" id="play">▶ Start (mit Ton)</button>
@@ -64,6 +64,7 @@
   if (isRender) return; // Steuerung übernimmt render.js (Playwright)
 
   const $ = (id) => document.getElementById(id);
+  for (const [key, m] of Object.entries(Melodies.MELODIES)) $('melody').add(new Option(m.title, key));
   const stats = $('stats');
   let frame = 0, running = false, last = 0, acc = 0, info = null, actx = null, master = null;
 

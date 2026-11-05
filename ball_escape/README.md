@@ -44,7 +44,7 @@ Das Ergebnis landet in `output/finished/`:
 |---|---|---|
 | `--rings N` | `12` | Anzahl Ringe (Hook passt sich an: „Kann der Ball N Ringe zerstören?“) |
 | `--mode plus2\|double` | `plus2` | `plus2`: +2 Bälle je Ring (~60 s). `double`: Bälle verdoppeln sich, endet mit 4.096 Bällen; ca. 25 s, gut für Shorts/Reels |
-| `--melody NAME` | `bergkoenig` | `bergkoenig` (Grieg), `ode` (Ode an die Freude), `elise` (Für Elise) |
+| `--melody NAME[,NAME…]` | `bergkoenig` | Song (siehe Liste unten). Mehrere mit Komma = **Serie**, ein Video pro Song mit eigenem Seed |
 | `--seed N\|auto` | `auto` | `auto` sucht einen Seed, bei dem der letzte Ring bei `--target` Sekunden bricht |
 | `--target S` / `--tol S` | `60` / `2` | Zielzeit des Finales (bei `double`: 25) |
 | `--seed-start N` | `1` | Ab welchem Seed gesucht wird. Ändern, um ein **neues** Video zu bekommen |
@@ -58,6 +58,33 @@ Jeder Seed ergibt einen anderen Ablauf.
 
 **Serie / Teil 2:** `--rings 24 --target 75`. Der End-Screen zeigt automatisch „Teil 2: 24 Ringe“.
 Bei mehr Ringen dauert die Suche länger, dann ggf. `--tol 4` setzen.
+
+## Songs
+
+Alle gemeinfrei (Komponist > 70 Jahre tot bzw. Volkslied), als eigene Notenliste in `melodies.js`:
+
+| Name | Song | Gut für |
+|---|---|---|
+| `korobeiniki` | Korobeiniki: russisches Volkslied, bekannt als Tetris-Melodie | sofort erkannt, viele Kommentare |
+| `turca` | Türkischer Marsch (Mozart) | schnell, verspielt |
+| `hummelflug` | Hummelflug (Rimski-Korsakow) | passt perfekt zur Chaos-Phase |
+| `jinglebells` | Jingle Bells (Pierpont) | November/Dezember |
+| `toccata` | Toccata und Fuge d-Moll (Bach) | dramatisch, gruselig |
+| `bergkoenig` | In der Halle des Bergkönigs (Grieg) | Spannung, wird immer höher |
+| `fuenfte` | 5. Sinfonie „Schicksal“ (Beethoven) | dramatischer Einstieg |
+| `elise` | Für Elise (Beethoven) | ruhig, bekannt |
+| `ode` | Ode an die Freude (Beethoven) | bekannt, fröhlich |
+| `nachtmusik` | Eine kleine Nachtmusik (Mozart) | klassisch, bekannt |
+| `morgenstimmung` | Morgenstimmung (Grieg) | entspannt |
+| `wiegenlied` | Wiegenlied „Guten Abend, gut’ Nacht“ (Brahms) | ruhig, ASMR |
+
+**Warum keine Chart-Songs?** Aktuelle Hits sowie Film- und Game-Soundtracks sind geschützt, auch wenn sie nur als einzelne
+Synth-Noten gespielt werden. Das kann zu Claims, Sperren und dem Verlust von Creator-Rewards-Einnahmen führen.
+
+Beispiel für eine Serie:
+```bash
+node ball_escape/render.js --melody korobeiniki,turca,hummelflug,jinglebells,toccata
+```
 
 ## Posting-Tipps (aus der Recherche)
 

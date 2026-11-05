@@ -370,7 +370,7 @@
    * und das Tempo stimmt (kein Ring sofort, keine endlos langen Pausen).
    */
   function findSeed(opts) {
-    const o = Object.assign({ target: 60, tol: 2, start: 1, tries: 800, minFirst: 2.5, maxGap: 15 }, opts);
+    const o = Object.assign({ target: 60, tol: 2, start: 1, tries: 800, minFirst: 2.5, maxFirst: 9, maxGap: 15 }, opts);
     let best = null;
     for (let k = 0; k < o.tries; k++) {
       const seed = o.start + k;
@@ -379,7 +379,7 @@
       if (!s.completed) continue;
       const gaps = s.breaks.map((b, i) => b - (i ? s.breaks[i - 1] : 0));
       const err = Math.abs(s.finalSec - o.target);
-      const paced = s.breaks[0] >= o.minFirst && Math.max(...gaps) <= o.maxGap;
+      const paced = s.breaks[0] >= o.minFirst && s.breaks[0] <= o.maxFirst && Math.max(...gaps) <= o.maxGap;
       if (err <= o.tol && paced) return Object.assign(s, { tried: k + 1 });
       const score = err + (paced ? 0 : 5);
       if (!best || score < best.score) best = Object.assign(s, { score, tried: k + 1 });
