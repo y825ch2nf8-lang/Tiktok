@@ -13,10 +13,14 @@ const INK = '#0f0d0b', CREAM = '#f3ede4';
 let ACC = '#f2a65a';
 const GRADE = 'contrast(1.08) saturate(0.88) brightness(0.93) sepia(0.10)';
 
-const main = document.getElementById('c'); main.width = W; main.height = H;
-const m = main.getContext('2d');
-const buf = document.createElement('canvas'); buf.width = W; buf.height = H;
-const x = buf.getContext('2d');
+// K = backing-store scale: layout stays in 1080-wide units, pixels are K times denser (K=2 -> 4K)
+const K = +(new URLSearchParams(location.search).get('k') || 1);
+const main = document.getElementById('c'); main.width = W * K; main.height = H * K; main.style.width = W + 'px'; main.style.height = H + 'px';
+const m = main.getContext('2d'); m.setTransform(K, 0, 0, K, 0, 0);
+const buf = document.createElement('canvas'); buf.width = W * K; buf.height = H * K;
+const x = buf.getContext('2d'); x.setTransform(K, 0, 0, K, 0, 0);
+x.imageSmoothingQuality = 'high'; m.imageSmoothingQuality = 'high';
+const kf = f => f.replace(/blur\(([\d.]+)px\)/g, (_, v) => `blur(${v * K}px)`);   // canvas filter lengths are device pixels
 const I = {};                                     // loaded images / video elements
 
 // ---------- math ----------
@@ -40,7 +44,7 @@ function photo(im, X, Y, w, h, o = {}) {
   ix = Math.min(X - M, Math.max(X + w - dw + M, ix)); iy = Math.min(Y - M, Math.max(Y + h - dh + M, iy));
   x.save(); x.beginPath(); x.rect(X, Y, w, h); x.clip();
   x.translate(X + w / 2 + (o.dx || 0), Y + h / 2 + (o.dy || 0)); x.rotate(o.rot || 0); x.translate(-(X + w / 2), -(Y + h / 2));
-  x.filter = o.grade || GRADE; x.drawImage(im, ix, iy, dw, dh); x.restore();
+  x.filter = kf(o.grade || GRADE); x.drawImage(im, ix, iy, dw, dh); x.restore();
 }
 function fill(c, X = 0, Y = 0, w = W, h = H) { x.fillStyle = c; x.fillRect(X, Y, w, h); }
 function shade(y0, a) {
@@ -88,7 +92,7 @@ function shutter(X, Y, w, h, t0, l, drawFn, d = .8) {
 }
 function circleImg(im, cx, cy, r, grade) {
   x.save(); x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.clip();
-  x.filter = grade || GRADE; const iw = im.width, ih = im.height, s = 2 * r / Math.min(iw, ih);
+  x.filter = kf(grade || GRADE); const iw = im.width, ih = im.height, s = 2 * r / Math.min(iw, ih);
   x.drawImage(im, cx - iw * s / 2, cy - ih * s / 2, iw * s, ih * s); x.restore();
 }
 // text set on a circle (rotating badge ring)
@@ -100,7 +104,7 @@ function ringText(str, cx, cy, r, rot, f) {
 
 // ---------- finishing passes (operate on main canvas m) ----------
 const grains = [...Array(6)].map(() => {
-  const c = document.createElement('canvas'); c.width = W / 2; c.height = H / 2; const g = c.getContext('2d');
+  const c = document.createElement('canvas'); c.width = W * K / 2; c.height = H * K / 2; const g = c.getContext('2d');
   const d = g.createImageData(c.width, c.height);
   for (let i = 0; i < d.data.length; i += 4) { const v = 128 + (Math.random() + Math.random() - 1) * 70; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
   g.putImageData(d, 0, 0); return c;
@@ -109,7 +113,7 @@ function whip(t, tc, w, dir = 1) { // directional motion-blur push across a cut
   const before = t < tc, p = before ? (t - (tc - w)) / w : 1 - (t - tc) / w, e = p * p * p;
   const off = (before ? -1 : 1) * dir * e * W * .55, spread = e * 300, n = 12;
   m.fillStyle = INK; m.fillRect(0, 0, W, H);
-  for (let i = 0; i < n; i++) { m.globalAlpha = 1 / (i + 1); m.drawImage(buf, off + spread * (i / (n - 1) - .5), 0); }
+  for (let i = 0; i < n; i++) { m.globalAlpha = 1 / (i + 1); m.drawImage(buf, off + spread * (i / (n - 1) - .5), 0, W, H); }
   m.globalAlpha = 1;
 }
 function leak(dt) { // warm light leak; dt = time relative to the cut it sits on
@@ -139,7 +143,7 @@ function render(t) {
     const d = rel(t, fx.t), w = fx.w || .12;
     if (Math.abs(d) < w) { drawShot(t); whip(fx.t + d, fx.t, w, fx.dir || 1); whipped = true; break; }
   }
-  if (!whipped) { drawShot(t); m.globalAlpha = 1; m.drawImage(buf, 0, 0); }
+  if (!whipped) { drawShot(t); m.globalAlpha = 1; m.drawImage(buf, 0, 0, W, H); }
   for (const fx of E.fx || []) {
     if (fx.type === 'flash') flash(rel(t, fx.t), fx.a);
     if (fx.type === 'leak') leak(rel(t, fx.t));

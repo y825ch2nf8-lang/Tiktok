@@ -31,8 +31,22 @@ Version 1 von „Bonn leuchtet“ wirkte nach KI. Der Nutzer hat sie abgelehnt. 
    - Fremde Logos, Wasserzeichen und Rahmen (z. B. City-Marketing-Rahmen) entfernen. Dünne Linien per Zeilen- oder
      Spalten-Interpolation retuschieren. **Kein Klonstempel auf Menschen**: das sieht man sofort. Lieber wegschneiden.
    - Instagram-UI (Play-Icons, Mehrfachbeitrag-Symbol, Texteinblendungen) wegschneiden.
-   - Hochskalieren: Lanczos 2–3× + UnsharpMask. Randlos (Vollbild) nur bis ca. 2,5× Originalauflösung. Bei
-     schwächerem Material das Bild als Plate (volle Breite, nicht volle Höhe) zeigen oder als Motion-Graphic lösen.
+   - **Immer die schärfste Quelle nehmen.** Hat der Nutzer dasselbe Foto mehrfach geschickt (Story, Beitrag,
+     Kachel), die Schärfe messen (Kantenvarianz `ImageFilter.FIND_EDGES` → `.var()` auf demselben Ausschnitt).
+     Beispiel Bonn: Der Beitrag-Screenshot war 4,5× schärfer als der Story-Screenshot, obwohl die Pixelzahl ähnlich war.
+   - Instagram-Overlays wegretuschieren: Karussell-Zähler „1/5“ (oben rechts, im Nachthimmel per Zeilen-Interpolation),
+     rote Rahmen, Logos.
+   - **Jedes Foto KI-schärfen (Pflicht, der Nutzer will es so):** `python3 promo/engine/upscale.py in.png out.jpg --mix 0.85`
+     (Real-ESRGAN x4plus auf CPU, Modell kommt automatisch aus PyPI). Bei sehr unscharfen Quellen `--mix 0.7`,
+     sonst erfindet die KI Details (Flaschen werden zu „Häuschen“). Dauer: ca. 9 s pro 192er-Kachel, also etwa
+     5 Minuten für ein Foto mit 1 MP. Mehrere Fotos nacheinander im Hintergrund laufen lassen (`nohup`) und
+     währenddessen am Schnitt arbeiten. Erst retuschieren, dann hochskalieren. Fokus- und Crop-Werte bleiben
+     gleich, weil `photo()` relativ arbeitet. Pixelzugriffe auf Assets (z. B. Logo-Ausschnitt) mit
+     `I.logo.width/<alte Breite>` skalieren.
+   - Beurteilen auf Handygröße (Frame auf ~585 px Breite verkleinert), nicht im 100-%-Ausschnitt. Bei 5× Vergrößerung
+     wirkt jedes KI-Bild im Pixel-Crop gemalt.
+   - Randlos (Vollbild) nur bis ca. 3× Quellauflösung vor dem KI-Upscale. Bei schwächerem Material das Bild als Plate
+     (volle Breite, nicht volle Höhe) zeigen oder als Motion-Graphic lösen.
    - **Beste Quelle sind Screenshots vom Reels-Tab** des Profils: Jede Kachel hat ca. 388×690 px, im Beitragsraster
      nur ca. 388×515 px. Die Aufrufzahl unten (Auge-Symbol) und Play-Icons wegschneiden, ebenso Logos von Kunden
      (Becher, Messewände, Fahrzeuge). Bei Story-Highlights (ca. 180 px) lohnt es sich meist nicht.
@@ -100,10 +114,14 @@ Neues Projekt = Ordner `promo/<name>/` mit `index.html` (von `promo/kehl_event/`
 ```bash
 python3 promo/engine/music.py promo/<name>/score.json promo/<name>/music.wav
 node promo/engine/render.js promo/<name> preview reel 0.3,1.5,3.6,8.0,12.0   # -> preview/contact_reel.jpg
-node promo/engine/render.js promo/<name> render reel                       # -> out/<name>_reel.mp4 (Musik wird gemuxt)
-node promo/engine/render.js promo/<name> render feed                       # 4:5, 1080x1350
+node promo/engine/render.js promo/<name> render reel                       # -> out/<name>_reel_4k.mp4, 2160x3840 (Standard)
+node promo/engine/render.js promo/<name> render feed                       # 4:5 in 4K, 2160x2700
+node promo/engine/render.js promo/<name> render reel --k=1                 # schneller 1080p-Entwurf
 ```
-Reel und Feed können parallel rendern (zwei Prozesse). Eine 27-s-Version braucht ca. 2–3 Minuten.
+**Ausgabe ist immer 4K** (`K=2`: Layout bleibt in 1080er-Einheiten, Canvas rendert doppelt so dicht). Die Bitrate ist
+auf 24 Mbit/s gedeckelt, damit 30 s unter ca. 90 MB bleiben (GitHub-Limit 100 MB). Reel und Feed parallel rendern:
+etwa 7 Minuten für 23 s in 4K. Vorschauen laufen in 1080p (schnell). Canvas-`blur()`-Werte skaliert die Engine automatisch mit `K`.
+Ältere Projektseiten ohne Engine (`promo/bonn_leuchtet/index.html`) haben dieselbe `?k=`-Logik und einen `prepare`-Stub.
 
 **`edit.js`** wird vor der Engine geladen. Engine-Globals (`W,H,S,L,T0,B0,FEED,INK,CREAM,ACC,F,x,I`) nur **innerhalb**
 von Funktionen benutzen, auf Top-Level eigene Konstanten anlegen (sonst „INK is not defined“).
@@ -127,6 +145,9 @@ sfx[{type: impact|riser|whoosh|swish|reverse|tick, t, dur?, g?}]`. `riser.t` = A
 - Loop: letzten und ersten Frame nebeneinanderlegen. Audio-Naht prüfen: Die zweite Ableitung an der Naht darf nicht
   über dem 99. Perzentil der Umgebung liegen.
 - Lautheit: `ffmpeg -i out.mp4 -af ebur128 -f null -` → I ≈ −13 LUFS.
+- 4K prüfen: `ffprobe` meldet 2160×3840 (Reel) bzw. 2160×2700 (Feed). Einen Frame auf Handygröße ansehen.
+- Ehrlich bleiben: Instagram spielt Reels höchstens in 1080p aus. Der 4K-Upload sorgt dafür, dass nach der
+  Neukomprimierung durch Instagram mehr Schärfe übrig bleibt.
 - Ton kann Claude nicht anhören. Das offen sagen und den Nutzer bitten reinzuhören.
 - Lieferung: beide Formate (9:16 für Reel, Story und TikTok, 4:5 für den Feed) per SendUserFile, dazu Caption,
   Hashtags, Collab-Tipp und Cover-Hinweis (Cover-Bild in der App wählen, z. B. das Hook-Frame).

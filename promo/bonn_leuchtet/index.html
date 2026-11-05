@@ -20,8 +20,11 @@ const T0=FEED?70:270, B0=FEED?H-80:1450;      // text-safe area (clear of Reels/
 const INK='#0f0d0b',CREAM='#f3ede4',ACC='#f2a65a';
 const GRADE='contrast(1.08) saturate(0.86) brightness(0.92) sepia(0.10)';
 
-const main=document.getElementById('c');main.width=W;main.height=H;const m=main.getContext('2d');
-const buf=document.createElement('canvas');buf.width=W;buf.height=H;const x=buf.getContext('2d');
+const K=+(new URLSearchParams(location.search).get('k')||1);   // backing-store scale (2 = 4K)
+const main=document.getElementById('c');main.width=W*K;main.height=H*K;main.style.width=W+'px';main.style.height=H+'px';const m=main.getContext('2d');m.setTransform(K,0,0,K,0,0);
+const buf=document.createElement('canvas');buf.width=W*K;buf.height=H*K;const x=buf.getContext('2d');x.setTransform(K,0,0,K,0,0);
+x.imageSmoothingQuality='high';m.imageSmoothingQuality='high';
+const kf=f=>f.replace(/blur\(([\d.]+)px\)/g,(_,v)=>`blur(${v*K}px)`);
 const I={};
 const load=n=>new Promise(r=>{const i=new Image();i.onload=()=>{I[n]=i;r()};i.src='img/'+n+'.jpg'});
 
@@ -39,7 +42,7 @@ function photo(im,X,Y,w,h,o={}){
   ix=Math.min(X-M,Math.max(X+w-dw+M,ix)); iy=Math.min(Y-M,Math.max(Y+h-dh+M,iy));
   x.save();x.beginPath();x.rect(X,Y,w,h);x.clip();
   x.translate(X+w/2+(o.dx||0),Y+h/2+(o.dy||0));x.rotate(o.rot||0);x.translate(-(X+w/2),-(Y+h/2));
-  x.filter=o.grade||GRADE;x.drawImage(im,ix,iy,dw,dh);x.restore();
+  x.filter=kf(o.grade||GRADE);x.drawImage(im,ix,iy,dw,dh);x.restore();
 }
 function shade(y0,a){const g=x.createLinearGradient(0,y0,0,H);g.addColorStop(0,'rgba(10,8,6,0)');g.addColorStop(.45,`rgba(10,8,6,${a*.82})`);g.addColorStop(1,`rgba(10,8,6,${a})`);x.fillStyle=g;x.fillRect(0,y0,W,H-y0)}
 function topShade(){const g=x.createLinearGradient(0,0,0,H*.22);g.addColorStop(0,'rgba(10,8,6,.45)');g.addColorStop(1,'rgba(10,8,6,0)');x.fillStyle=g;x.fillRect(0,0,W,H*.22)}
@@ -141,7 +144,7 @@ function shotG(l,t){ // end card
   const cy=FEED?H*.5:H*.45,push=1+l*.007;
   x.save();x.translate(W/2,cy);x.scale(push,push);x.translate(-W/2,-cy);
   const lp=outExpo(cl((l-.05)/1)),R=104*S,ly=cy-265*S+(1-lp)*24;
-  x.save();x.globalAlpha=lp;x.beginPath();x.arc(W/2,ly,R,0,7);x.clip();x.drawImage(I.logo,34,32,232,232,W/2-R,ly-R,2*R,2*R);x.restore();
+  x.save();x.globalAlpha=lp;x.beginPath();x.arc(W/2,ly,R,0,7);x.clip();const lk=I.logo.width/300;x.drawImage(I.logo,34*lk,32*lk,232*lk,232*lk,W/2-R,ly-R,2*R,2*R);x.restore();
   x.save();x.globalAlpha=lp*.35;x.strokeStyle=CREAM;x.lineWidth=1.5;x.beginPath();x.arc(W/2,ly,R+16,0,7);x.stroke();x.restore();
   line('Vino & Spritz Bar',W/2,cy-5*S,F.serif(130*S),.20,l,{align:'center'});
   line('@kehl_event',W/2,cy+88*S,F.sans(46*S,CREAM,600),.42,l,{align:'center'});
@@ -161,7 +164,7 @@ const SHOTS=[
 ];
 
 // ---------- finishing ----------
-const grains=[...Array(6)].map(()=>{const c=document.createElement('canvas');c.width=W/2;c.height=H/2;const g=c.getContext('2d');
+const grains=[...Array(6)].map(()=>{const c=document.createElement('canvas');c.width=W*K/2;c.height=H*K/2;const g=c.getContext('2d');
   const d=g.createImageData(c.width,c.height);for(let i=0;i<d.data.length;i+=4){const v=128+(Math.random()+Math.random()-1)*70;d.data[i]=d.data[i+1]=d.data[i+2]=v;d.data[i+3]=255}
   g.putImageData(d,0,0);return c});
 function drawShot(t){x.save();x.filter='none';x.fillStyle=INK;x.fillRect(0,0,W,H);
@@ -170,7 +173,7 @@ function whip(t,tc,w){ // directional motion-blur whip pan across the cut
   const before=t<tc,p=before?(t-(tc-w))/w:1-(t-tc)/w,e=p*p*p;
   const off=(before?-1:1)*e*W*.55,spread=e*300,n=12;
   m.fillStyle=INK;m.fillRect(0,0,W,H);
-  for(let i=0;i<n;i++){m.globalAlpha=1/(i+1);m.drawImage(buf,off+spread*(i/(n-1)-.5),0)}
+  for(let i=0;i<n;i++){m.globalAlpha=1/(i+1);m.drawImage(buf,off+spread*(i/(n-1)-.5),0,W,H)}
   m.globalAlpha=1;
 }
 function leak(t,tc){ // warm light leak peaking on the cut
@@ -185,14 +188,14 @@ function leak(t,tc){ // warm light leak peaking on the cut
 function render(t){
   const tc=12*B,ww=.12;
   drawShot(t);
-  if(Math.abs(t-tc)<ww)whip(t,tc,ww);else{m.globalAlpha=1;m.drawImage(buf,0,0)}
+  if(Math.abs(t-tc)<ww)whip(t,tc,ww);else{m.globalAlpha=1;m.drawImage(buf,0,0,W,H)}
   const fd=t-4*B;if(fd>=0&&fd<.35){m.fillStyle=`rgba(255,248,235,${.45*Math.exp(-fd*12)})`;m.fillRect(0,0,W,H)}
   leak(t,8*B);leak(t,24*B);
   const v=m.createRadialGradient(W/2,H/2,H*.32,W/2,H/2,H*.78);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.42)');m.fillStyle=v;m.fillRect(0,0,W,H);
   m.save();m.globalCompositeOperation='overlay';m.globalAlpha=.45;m.drawImage(grains[Math.round(t*30)%6],0,0,W,H);m.restore();
   const fade=Math.max(1-t/.15,1-(DUR-t)/.7,0);if(fade>0){m.fillStyle=`rgba(0,0,0,${cl(fade)})`;m.fillRect(0,0,W,H)}
 }
-window.DUR=DUR;window.render=render;
+window.DUR=DUR;window.render=render;window.prepare=async()=>{};
 window.ready=(async()=>{
   await Promise.all(['crowd','bar','rathaus','logo'].map(load));
   await Promise.all(['italic 400 40px "Instrument Serif"','500 40px "Inter Tight"','600 40px "Inter Tight"','800 40px "Inter Tight"'].map(f=>document.fonts.load(f,'Aäß—·')));

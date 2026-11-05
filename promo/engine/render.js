@@ -1,21 +1,24 @@
 // Render a promo project to video or preview stills.
-//   node promo/engine/render.js <projectDir> render  reel|feed
-//   node promo/engine/render.js <projectDir> preview reel|feed 1.2,3.4,...   -> <projectDir>/preview/contact_<fmt>.jpg
+//   node promo/engine/render.js <projectDir> render  reel|feed            -> 4K (2160x3840 / 2160x2700), default
+//   node promo/engine/render.js <projectDir> render  reel --k=1           -> 1080p draft
+//   node promo/engine/render.js <projectDir> preview reel|feed 1.2,3.4,...   -> <projectDir>/preview/contact_<fmt>.jpg (1080p)
 // <projectDir>/index.html must define the canvas page. If <projectDir>/music.wav exists it is muxed in.
 const { chromium } = require('playwright');
 const { spawn, execFileSync } = require('child_process');
 const fs = require('fs'), path = require('path');
 
-const [dirArg, mode = 'preview', fmt = 'reel', times = ''] = process.argv.slice(2);
+const flags = Object.fromEntries(process.argv.slice(2).filter(a => a.startsWith('--')).map(a => a.slice(2).split('=')));
+const [dirArg, mode = 'preview', fmt = 'reel', times = ''] = process.argv.slice(2).filter(a => !a.startsWith('--'));
 const D = path.resolve(dirArg), feed = fmt === 'feed', VH = feed ? 1350 : 1920;
+const K = +(flags.k || (mode === 'render' ? 2 : 1)), tag = K === 2 ? '_4k' : K === 1 ? '' : `_x${K}`;
 const OUT = path.join(D, 'out'); fs.mkdirSync(OUT, { recursive: true });
 const name = path.basename(D);
 
 (async () => {
   const b = await chromium.launch({ args: ['--allow-file-access-from-files', '--autoplay-policy=no-user-gesture-required'] });
-  const p = await b.newPage({ viewport: { width: 1080, height: VH } });
+  const p = await b.newPage({ viewport: { width: 1080, height: VH }, deviceScaleFactor: K });
   p.on('pageerror', e => { console.error('PAGE ERROR', e.message); process.exitCode = 1; });
-  await p.goto('file://' + D + '/index.html' + (feed ? '?feed' : ''));
+  await p.goto('file://' + D + '/index.html?k=' + K + (feed ? '&feed' : ''));
   await p.evaluate(() => window.ready);
   const shot = async t => { await p.evaluate(async t => { await prepare(t); render(t); }, t); return p.screenshot({ type: 'jpeg', quality: 95 }); };
 
@@ -31,14 +34,15 @@ const name = path.basename(D);
       execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-vf', `scale=324:-1,tile=${cols}x${rows}:padding=4:color=white`, '-frames:v', '1', path.join(dir, `contact_${fmt}.jpg`)]);
     }
   } else {
-    const fps = 30, dur = await p.evaluate(() => DUR), raw = path.join(OUT, `${name}_${fmt}_noaudio.mp4`);
-    const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', '' + fps, '-c:v', 'mjpeg', '-i', '-', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-preset', 'medium', raw], { stdio: ['pipe', 'inherit', 'inherit'] });
+    const fps = 30, dur = await p.evaluate(() => DUR), raw = path.join(OUT, `${name}_${fmt}${tag}_noaudio.mp4`);
+    const rate = K > 1 ? ['-maxrate', '24M', '-bufsize', '48M', '-profile:v', 'high', '-level', '5.1'] : [];
+    const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', '' + fps, '-c:v', 'mjpeg', '-i', '-', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-preset', 'medium', ...rate, raw], { stdio: ['pipe', 'inherit', 'inherit'] });
     const n = Math.round(dur * fps);
     for (let i = 0; i < n; i++) { const buf = await shot(i / fps); if (!ff.stdin.write(buf)) await new Promise(r => ff.stdin.once('drain', r)); }
     ff.stdin.end(); await new Promise(r => ff.on('close', r));
     const wav = path.join(D, 'music.wav');
     if (fs.existsSync(wav)) {
-      const fin = path.join(OUT, `${name}_${fmt}.mp4`);
+      const fin = path.join(OUT, `${name}_${fmt}${tag}.mp4`);
       execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', raw, '-i', wav, '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', fin]);
       fs.unlinkSync(raw); console.log('wrote', fin);
     } else console.log('wrote', raw, '(no music.wav found)');
