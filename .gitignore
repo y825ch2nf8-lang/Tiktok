@@ -28,3 +28,4 @@ ball_escape/node_modules/
 promo/*/preview/
 promo/*/out/
 promo/*/music.wav
+promo/*/*.log
