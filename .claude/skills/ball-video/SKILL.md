@@ -67,8 +67,13 @@ Länge oder welcher Hook besser läuft. Diese Erkenntnisse kommen in die Regeln 
   (`maxFirst`).
 - **Die erste Sekunde entscheidet:** v1 verlor die meisten Zuschauer bei 0:01 (Ø 13,9 s, 0,84 % ganz gesehen). Ab dem
   ersten Frame muss sich etwas bewegen oder aufbauen. Likes kamen bei 0:04, sobald etwas passierte.
-- **Fäden (`--threads`)** sorgen ab dem ersten Aufprall für ein wachsendes Muster. Dazu passt der Ton „gezupfter Faden“
-  (`--sound asmr` wählt automatisch `string`). Beim Entkommen reißen die Fäden.
+- **ASMR muss leise und weich sein.** Nutzer-Feedback 05.11.: Das Level-up-Ding (FM-Glocke, wurde immer höher) und das
+  gezupfte Aufprall-Geräusch (3 Oktaven, langes Nachklingen, −14 LUFS) waren „viel zu laut und unsatisfying“. Seitdem gilt:
+  ca. −21 LUFS, Aufprall tief und kurz (`soft`), dichte Phasen automatisch leiser, Level-up ca. 15 dB unter den
+  Aufprall-Tönen, nichts Metallisches und nichts, was endlos höher steigt. Neue Klänge immer mit 12-s-Hörproben
+  (`--seconds 12 --out …`) vom Nutzer abnehmen lassen, Claude kann nicht hören.
+- **Fäden (`--threads`)** sorgen ab dem ersten Aufprall für ein wachsendes Muster. Dazu passt der weiche Faden-„Thup“
+  (`--sound asmr` wählt automatisch `soft`). Beim Entkommen reißen die Fäden.
 - **Bei wenigen Likes zuerst die Analytics anfordern:** durchschnittliche Wiedergabezeit und „Gesamtes Video angesehen“
   in Prozent. Erst damit lässt sich sagen, wo die Leute abspringen.
 

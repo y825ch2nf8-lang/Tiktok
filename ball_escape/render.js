@@ -72,7 +72,7 @@ function parseArgs(argv) {
     }
   }
   if (a.sound === 'asmr') a.music = 'asmr';
-  if (a.threads && a.music === 'asmr' && !a.asmr) a.asmr = 'string'; // Faden-Video -> gezupfter Faden
+  if (a.threads && a.music === 'asmr' && !a.asmr) a.asmr = 'soft'; // Faden-Video -> weicher, gedämpfter Faden-Thup
   // Kurz (≈35 s) = mehr Leute schauen bis zum Ende -> mehr Likes & Push. Lang (≈67 s) erst ab 10K Followern
   // sinnvoll (Creator Rewards). Standard: Box kurz, Ringe lang.
   if (!a.length) a.length = a.scene === 'box' ? 'short' : 'long';
@@ -225,7 +225,7 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
 
     const workDir = path.join(ROOT, 'output', 'work', 'ball_escape');
     fs.mkdirSync(workDir, { recursive: true });
-    const wavPath = path.join(workDir, `audio_seed${seed}.wav`);
+    const wavPath = path.join(workDir, `audio_seed${seed}_${process.pid}_${melodyName}.wav`); // eindeutig, auch bei parallelen Läufen
     const loopChimeAt = sum.completed && !a.seconds ? dur - 1.4 : null;
     const pcm = audio.renderAudio(sum.events.filter((e) => e.vt < dur), dur, { seed, tonic: mel.tonic, chord: mel.chord, loopChimeAt, song: Melodies.compile(melodyName), rings: a.scene === 'box' ? 12 : a.rings, stageTimes: sum.stages.filter((t) => t < dur), music: a.music, skin: simOpts.skin || 'smiley', asmr: a.asmr, scene: a.scene, goal: a.goal });
     fs.writeFileSync(wavPath, audio.toWav(pcm));

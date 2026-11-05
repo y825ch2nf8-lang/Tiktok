@@ -402,18 +402,66 @@ function sliceFrom(buf, skipSec) {
 /* ---------------- ASMR-Modus: Geräusche statt Musik ---------------- */
 
 // Welche Figur welches Aufprall-Geräusch bekommt
-const ASMR_FOR_SKIN = { smiley: 'boing', cat: 'plop', egg: 'crack', neon: 'glass' };
-const ASMR_KINDS = ['boing', 'plop', 'crack', 'glass', 'click', 'marble', 'pop', 'string'];
+const ASMR_FOR_SKIN = { smiley: 'drop', cat: 'soft', egg: 'soft', neon: 'drop' };
+const ASMR_KINDS = ['soft', 'drop', 'boing', 'plop', 'crack', 'glass', 'click', 'marble', 'pop', 'string'];
 // Gezupfter Faden: Länge -> Tonhöhe (lang = tief), auf eine Pentatonik gerastert, damit nichts schräg klingt
 const PENTA = [0, 3, 5, 7, 10];
 function stringFreq(len) {
   const x = Math.max(0, Math.min(1, (len - 40) / 820));
-  const steps = Math.round((1 - x) * 14); // 14 Pentatonik-Stufen ≈ knapp 3 Oktaven
+  const steps = Math.round((1 - x) * 5); // 5 Pentatonik-Stufen = 1 Oktave
   const semis = Math.floor(steps / 5) * 12 + PENTA[steps % 5];
-  return hz(52 + semis); // ab E3
+  return hz(45 + semis); // A2–A3, tief und weich
+}
+/* Weicher, gedämpfter Faden-"Thup": tief, kurz, ohne Nachklingeln. Länge -> Tonhöhe stufenlos in nur 1 Oktave. */
+function softFreq(len) {
+  const x = Math.max(0, Math.min(1, (len - 40) / 820));
+  return 130 * Math.pow(2, 1 - x); // 130–260 Hz: lang = tief
+}
+function softThup(freq, seed) {
+  const n = Math.floor(0.22 * SR);
+  const out = new Float32Array(n);
+  const N = Math.max(2, Math.round(SR / freq));
+  const buf = new Float32Array(N);
+  const r = mulberry32(seed);
+  let lp = 0;
+  for (let i = 0; i < N; i++) { lp += 0.2 * (r() * 2 - 1 - lp); buf[i] = lp; }
+  let a = 0;
+  let b = 0;
+  for (let i = 0; i < n; i++) {
+    const j = i % N;
+    const y = buf[j];
+    buf[j] = 0.5 * (y + buf[(j + 1) % N]) * 0.965; // stark gedämpft
+    a += 0.12 * (y - a);
+    b += 0.12 * (a - b); // zweifacher Tiefpass: nichts Spitzes
+    const t = i / SR;
+    out[i] = b * 5 * Math.min(1, t / 0.003) * (i > n - 1200 ? (n - i) / 1200 : 1);
+  }
+  return out;
+}
+/* Wassertropfen: kurzer, runder Ton mit kleinem Aufwärts-Glissando */
+function waterDrop(pitch, seed) {
+  const r = mulberry32(seed);
+  const f0 = (360 + r() * 80) * pitch;
+  let ph = 0;
+  return synth(0.12, (t) => {
+    const f = f0 * (1 + 0.8 * (1 - Math.exp(-t / 0.012)));
+    ph += (TAU * f) / SR;
+    return Math.sin(ph) * Math.exp(-t / 0.035) * Math.min(1, t / 0.004);
+  });
+}
+/* Sanftes Level-up: zwei reine Sinustöne (Quinte), weicher Einsatz, kein Metall, immer gleiche Höhe */
+function softChime() {
+  const f1 = hz(72);
+  const f2 = hz(79);
+  return synth(1.1, (t) => {
+    const att = Math.min(1, t / 0.012);
+    const a = Math.sin(TAU * f1 * t) * Math.exp(-t / 0.45);
+    const b = t > 0.06 ? Math.sin(TAU * f2 * (t - 0.06)) * Math.exp(-(t - 0.06) / 0.5) * 0.8 : 0;
+    return att * (a + b) * 0.5;
+  });
 }
 function stringPluck(freq, seed) {
-  const n = Math.floor(0.9 * SR);
+  const n = Math.floor(0.45 * SR);
   const out = new Float32Array(n);
   const N = Math.max(2, Math.round(SR / freq));
   const buf = new Float32Array(N);
@@ -424,7 +472,7 @@ function stringPluck(freq, seed) {
   for (let i = 0; i < n; i++) {
     const j = i % N;
     const y = buf[j];
-    buf[j] = 0.5 * (y + buf[(j + 1) % N]) * 0.994;
+    buf[j] = 0.5 * (y + buf[(j + 1) % N]) * 0.985;
     body += 0.25 * (y - body); // weicher Klang, kein spitzes Zirpen
     out[i] = body * 2.2 * (i > n - 2400 ? (n - i) / 2400 : 1);
   }
@@ -524,30 +572,36 @@ function renderAsmr(events, durationSec, opts) {
   const goal = opts.goal || 1000;
   const panOf = (x) => Math.max(-0.7, Math.min(0.7, ((x == null ? width / 2 : x) / width) * 2 - 1)) * 0.7;
   let lastEscape = -1;
-  let level = 0;
+  const recent = []; // Zeitpunkte der letzten Aufprall-Töne (für Dichte-abhängige Lautstärke)
   for (const e of events) {
     if (e.vt >= durationSec) continue;
     if (e.type === 'note') {
-      const pitch = Math.pow(2, (rng() * 6 - 3) / 12);
-      const g = 0.5 * e.vel;
-      const h = kind === 'string' ? stringPluck(stringFreq(e.len || 400), Math.floor(rng() * 1e9)) : asmrHit(kind, pitch, rng);
+      const pitch = Math.pow(2, (rng() * 4 - 2) / 12);
+      // Je dichter die Aufpralle, desto leiser jeder einzelne -> sanftes "Rieseln" statt Lärm
+      recent.push(e.vt);
+      while (recent.length && recent[0] < e.vt - 1) recent.shift();
+      const g = (0.5 * (0.7 + 0.3 * e.vel)) / Math.sqrt(1 + recent.length / 4);
+      const seed = Math.floor(rng() * 1e9);
+      const h = kind === 'soft' ? softThup(softFreq(e.len || 400), seed)
+        : kind === 'drop' ? waterDrop(pitch, seed)
+        : kind === 'string' ? stringPluck(stringFreq(e.len || 400), seed)
+        : asmrHit(kind, pitch, rng);
       dry.add(e.vt, h, g, panOf(e.x));
-      send.add(e.vt, h, g * 0.25, panOf(e.x));
+      send.add(e.vt, h, g * 0.2, panOf(e.x));
     } else if (e.type === 'escape') {
-      if (e.vt - lastEscape < 1 / 12) continue; // nicht mehr als ~12 Pops pro Sekunde
+      if (e.vt - lastEscape < 1 / 6) continue; // höchstens ~6 Pops pro Sekunde
       lastEscape = e.vt;
-      // Pop wird mit steigender Ballzahl höher (2 Oktaven bis zum Ziel) -> Spannung
-      const semis = (24 * Math.log(Math.max(1, e.balls || 1))) / Math.log(goal);
-      const h = asmrHit('pop', Math.pow(2, semis / 12), rng);
-      dry.add(e.vt, h, 0.35, panOf(e.x));
-      send.add(e.vt, h, 0.1, panOf(e.x));
+      // Pop steigt mit der Ballzahl nur sanft (1 Oktave bis zum Ziel), tiefer Grundton
+      const semis = (12 * Math.log(Math.max(1, e.balls || 1))) / Math.log(goal);
+      const h = waterDrop(0.75 * Math.pow(2, semis / 12), Math.floor(rng() * 1e9));
+      dry.add(e.vt, h, 0.16, panOf(e.x));
+      send.add(e.vt, h, 0.06, panOf(e.x));
     } else if (e.type === 'stage' || (e.type === 'break' && opts.scene !== 'box')) {
       if (e.type === 'break' && e.final) continue; // Finale unten
       if (e.type === 'stage' && e.final) continue;
-      const lu = levelUp(76 + level);
-      level++;
-      dry.add(e.vt, lu, 0.22, 0);
-      send.add(e.vt, lu, 0.2, 0);
+      const lu = softChime();
+      dry.add(e.vt, lu, 0.12, 0);
+      send.add(e.vt, lu, 0.12, 0);
       if (e.type === 'break') {
         const g = glass(e.ring, rng, false);
         dry.add(e.vt, g, 0.3, 0);
@@ -557,10 +611,10 @@ function renderAsmr(events, durationSec, opts) {
       const g = glass(e.ring || 0, rng, true);
       fin.add(e.vt, g, 1, 0);
       const c = crash();
-      fin.add(e.vt, c, 0.4, 0.2);
+      fin.add(e.vt, c, 0.12, 0.2);
     }
   }
-  if (opts.loopChimeAt != null) dry.add(opts.loopChimeAt, kind === 'string' ? stringPluck(stringFreq(300), 7) : asmrHit(kind, 1, rng), 0.4, 0);
+  if (opts.loopChimeAt != null) dry.add(opts.loopChimeAt, softThup(softFreq(300), 7), 0.4, 0);
 
   const [wl, wr] = reverb(send.L, send.R, n);
   const L = dry.L;
@@ -569,7 +623,7 @@ function renderAsmr(events, durationSec, opts) {
     L[i] += wl[i] * 0.5;
     R[i] += wr[i] * 0.5;
   }
-  // Pegel: Geräusche sind spärlich -> nur hörbare Samples zählen; Aufprall-Spitzen auf ~0.55
+  // Pegel: ASMR bewusst leise (≈ -20 LUFS statt Musik-Lautstärke). Aufprall-Spitzen auf ~0.3, Finale ~0.6
   const sample = [];
   for (let i = 0; i < n; i += 7) {
     const a = Math.max(Math.abs(L[i]), Math.abs(R[i]));
@@ -577,10 +631,10 @@ function renderAsmr(events, durationSec, opts) {
   }
   sample.sort((x, y) => x - y);
   const p = sample.length ? sample[Math.floor(sample.length * 0.998)] : 1;
-  const g = 0.55 / Math.max(p, 1e-6);
+  const g = 0.3 / Math.max(p, 1e-6);
   let finPeak = 0;
   for (let i = 0; i < n; i++) finPeak = Math.max(finPeak, Math.abs(fin.L[i]), Math.abs(fin.R[i]));
-  const gf = finPeak > 0 ? 0.9 / finPeak : 0;
+  const gf = finPeak > 0 ? 0.6 / finPeak : 0;
   const fadeLen = Math.floor(0.05 * SR);
   for (let i = 0; i < n; i++) {
     const f = i > n - fadeLen ? (n - i) / fadeLen : 1;

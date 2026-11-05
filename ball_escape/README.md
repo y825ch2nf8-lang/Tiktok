@@ -76,28 +76,29 @@ node ball_escape/render.js --scene box --skin cat --melody korobeiniki --waterma
 
 ## ASMR-Modus: Geräusche statt Musik
 
-`--sound asmr` ersetzt die Musik durch selbst erzeugte Geräusche:
+`--sound asmr` ersetzt die Musik durch selbst erzeugte, **leise und weiche** Geräusche (≈ −21 LUFS statt Musik-Lautstärke):
 
 | Moment | Geräusch |
 |---|---|
-| Aufprall | passend zur Figur: Smiley = Boing, Katze = Plopp, Ei = Knack, Neon = Glas-Ting |
-| Entkommen | Bubble-Pop, der mit der Ballzahl immer höher wird (2 Oktaven bis zum Ziel) |
-| Meilenstein | „Level-up“-Ding, jede Stufe einen Halbton höher; im Bild steht „LEVEL 5“ |
-| Finale | großer Knall + Crash, danach Stille |
+| Aufprall | Standard `soft`: gedämpfter Faden-„Thup“, tief (130–260 Hz), lange Fäden etwas tiefer. Je dichter die Aufpralle, desto leiser jeder einzelne, damit es wie ein sanftes Rieseln klingt |
+| Entkommen | kleiner Wassertropfen, höchstens 6 pro Sekunde, steigt bis zum Ziel nur um 1 Oktave |
+| Meilenstein | leiser, reiner Zweiklang (kein Metall, immer gleiche Höhe), ca. 15 dB unter den Aufprall-Tönen. Im Bild steht „LEVEL 5“ |
+| Finale | weicher Knall, danach Stille |
 
-Mit `--asmr click|marble|glass|pop|boing|plop|crack|string` wählst du ein anderes Aufprall-Geräusch. Der Hook wird zu
-„SCHAFFT ER 1.000 BÄLLE?“, die Caption endet mit „Ton an 🔊“.
+Mit `--asmr soft|drop|string|click|marble|glass|pop|boing|plop|crack` wählst du ein anderes Aufprall-Geräusch
+(`drop` = Wassertropfen, `string` = leise gezupft). Der Hook wird zu „SCHAFFT ER 1.000 BÄLLE?“, die Caption endet mit
+„Ton an 🔊“.
 
 ```bash
-node ball_escape/render.js --scene box --skin egg --sound asmr
-node ball_escape/render.js --scene box --skin cat --sound asmr --asmr click
+node ball_escape/render.js --scene box --skin cat --sound asmr --threads
+node ball_escape/render.js --scene box --skin cat --sound asmr --threads --asmr drop
 ```
 
 ### Fäden (`--threads`)
 
 Bei jedem Aufprall spannt sich ein Faden vom Aufprallpunkt an der Wand zur Figur. Die Fäden drehen sich mit der Arena,
 das Netz wird mit jeder Stufe dichter. Beim Entkommen reißen sie. Im ASMR-Modus klingt jeder Aufprall wie ein gezupfter
-Faden: lange Fäden tief, kurze hoch, auf eine Pentatonik gerastert, damit nichts schräg klingt.
+Faden-„Thup“, weich und tief.
 
 ```bash
 node ball_escape/render.js --scene box --skin cat --sound asmr --threads
