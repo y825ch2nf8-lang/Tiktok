@@ -59,6 +59,9 @@ Länge oder welcher Hook besser läuft. Diese Erkenntnisse kommen in die Regeln 
 
 ## Gelernte Regeln (immer anwenden, mit Quelle erweitern)
 
+- **Tunnel = unendlicher Zoom** (Nutzerwunsch 06.11.): Die Gesamtzahl der Ringe bleibt bis kurz vor Schluss unbekannt.
+  Ringradien wachsen geometrisch (×1,03), das Loch bleibt ~230 px groß, und die Kamera zoomt mit jedem Ring weich raus.
+  Der Zähler zählt die zerstörten Ringe hoch. In allen Zusatz-Formaten gibt es kein Wackeln mehr.
 - **Satisfying = ruhig und sauber** (Nutzer-Kritik 06.11.: „Kamera bewegt sich so viel, schlechte Grafik“): Kamera fest,
   kein Folgen und kein Zoom pro Treffer, kein Wackeln. Linien mit mindestens 3 px Abstand, sonst gibt es Moiré. Kein Bloom
   über feinen Linien. Effekte weich: aufleuchten, weiten, verblassen; runde Funken statt eckiger Splitter. Vor dem

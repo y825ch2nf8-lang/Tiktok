@@ -41,7 +41,7 @@
     layers: { layerN: 240, layerGap: 7, layerTop: 760, boxL: 110, boxRight: 930, gravity: 1800, ballR: 18, startSpeed: 420, bounceMin: 950, breakPerSpeed: 120, outroDur: 4.5 },
     battle: { teams: 4, ballR: 58, startSpeed: 640, gravity: 0, hp: 100, arenaR: 430, outroDur: 4.5, cy: 980 },
     power: { gravity: 2600, ballR: 16, outroDur: 3.5, blockTop: 980, blockBottom: 1560, boxL: 150, boxRight: 930, bounceTop: 560, cy: 1100 },
-    tunnel: { tunnelN: 140, tunnelR0: 95, tunnelStep: 3, tunnelBins: 360, tunnelSpeed: 3, ballR: 10, outroDur: 3.5, cy: 940 },
+    tunnel: { tunnelN: 140, tunnelR0: 95, tunnelGrow: 1.03, tunnelBins: 4, tunnelSpeed: 3.5, ballR: 10, outroDur: 3.5, cy: 960 },
     press: { goal: 500, arenaR: 430, ballR: 18, ballRMin: 7, startSpeed: 650, gravity: 250, pressOpen: 300, pressH: 420, pressPeriod: 1.2, outroDur: 4, cy: 1000 },
   };
 
@@ -545,9 +545,10 @@
       const a = this.rng() * TAU;
       this.ball(0, 0, Math.cos(a), Math.sin(a), { bigUntil: -1, fastUntil: -1 });
     }
-    r(i) { return this.o.tunnelR0 + i * this.o.tunnelStep; }
-    ballR(b) { return this.o.ballR * (b.bigUntil > this.t ? 1.8 : 1); }
-    speed(b) { return Math.max(520, this.h * this.o.tunnelSpeed) * (b.fastUntil > this.t ? 1.6 : 1); }
+    r(i) { return this.o.tunnelR0 * Math.pow(this.o.tunnelGrow, i); }
+    // alles skaliert mit dem Loch -> auf dem Bildschirm immer gleich groß und gleich schnell
+    ballR(b) { return this.h * 0.045 * (b.bigUntil > this.t ? 1.8 : 1); }
+    speed(b) { return this.h * this.o.tunnelSpeed * (b.fastUntil > this.t ? 1.6 : 1); }
     spawnPowerup() {
       const kinds = ['x2', 'big', 'fast'];
       const kind = this.balls.length >= 4 ? kinds[1 + Math.floor(this.rng() * 2)] : kinds[Math.floor(this.rng() * 3)];
@@ -582,7 +583,7 @@
         const br = this.ballR(b);
         for (const p of this.powerups) {
           if (p.taken) continue;
-          if (Math.hypot(b.x - p.u * this.h, b.y - p.v * this.h) < br + 28) {
+          if (Math.hypot(b.x - p.u * this.h, b.y - p.v * this.h) < br + this.h * 0.12) {
             p.taken = true;
             if (p.kind === 'x2') this.ball(b.x, b.y, -b.vx, b.vy, { bigUntil: -1, fastUntil: -1 });
             else if (p.kind === 'big') b.bigUntil = this.t + 5;
@@ -647,12 +648,13 @@
       fx.shake = { t0: ev.t, amp: 14, dur: 0.3 };
     } else if (ev.type === 'tunnelhit') {
       fx.rings = fx.rings || [];
-      fx.rings.push({ r: sim.r(ev.j), t0: ev.t, hue: 255 + 115 * (ev.j / sim.n) });
+      const R = sim.r(ev.j);
+      fx.rings.push({ r: R, t0: ev.t, hue: 255 + 115 * ((ev.j % 40) / 40) });
       const a0 = Math.atan2(ev.y, ev.x);
       for (let k = 0; k < 10; k++) {
         const a = a0 + (rng() - 0.5) * 1.2;
-        const sp = 60 + rng() * 140;
-        fx.parts.push({ x: o.cx + Math.cos(a) * sim.r(ev.j), y: o.cy + Math.sin(a) * sim.r(ev.j), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 0.5 + rng() * 0.3, col: `hsl(${255 + 115 * (ev.j / sim.n)},100%,80%)`, s: 2.5, round: true });
+        const sp = R * (0.25 + rng() * 0.5);
+        fx.parts.push({ x: Math.cos(a) * R, y: Math.sin(a) * R, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 0.5 + rng() * 0.3, col: `hsl(${255 + 115 * ((ev.j % 40) / 40)},100%,80%)`, s: 2.5, tun: true });
       }
     } else if (ev.type === 'powerup') {
       const L = { x2: { de: '×2 BALL!', en: '×2 BALL!' }, big: { de: 'GRÖSSER!', en: 'BIGGER!' }, fast: { de: 'SCHNELLER!', en: 'FASTER!' } };
@@ -676,7 +678,7 @@
   }
 
   function update(fx, dt) {
-    for (const p of fx.parts) { p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life += dt; }
+    for (const p of fx.parts) { if (!p.tun) p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life += dt; }
     fx.parts = fx.parts.filter((p) => p.life < p.max);
   }
 
@@ -803,34 +805,37 @@
     } else if (o.scene === 'tunnel') {
       const cx = o.cx;
       const cy = o.cy;
-      // feine Ringe, fließender Farbverlauf (Lila -> Pink -> Orange), keine Kamera-Bewegung
+      // weicher Zoom: Loch bleibt ~230 px groß, jeder zerstörte Ring zoomt ein Stück raus
+      const zt = 230 / sim.h;
+      fx.zoom = fx.zoom == null ? zt : fx.zoom * Math.pow(zt / fx.zoom, 0.08);
+      const z = fx.zoom;
+      const maxR = 1250 / z;
       ctx.lineWidth = 1.7;
       for (let i = sim.passed; i < sim.n; i++) {
-        const f = i / sim.n;
-        ctx.strokeStyle = `hsl(${255 + 115 * f},85%,${i % 2 ? 58 : 68}%)`;
-        ctx.beginPath(); ctx.arc(cx, cy, sim.r(i), 0, TAU); ctx.stroke();
+        const R = sim.r(i);
+        if (R > maxR) break;
+        const f = (i % 40) / 40; // Farbverlauf wiederholt sich -> verrät die Gesamtzahl nicht
+        const hue = 255 + 115 * (f < 0.5 ? f * 2 : 2 - f * 2);
+        ctx.strokeStyle = `hsl(${hue},85%,${i % 2 ? 58 : 68}%)`;
+        ctx.beginPath(); ctx.arc(cx, cy, R * z, 0, TAU); ctx.stroke();
       }
-      // sanfter Rand am Loch
-      const hr = sim.r(Math.min(sim.passed, sim.n - 1));
       ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(cx, cy, hr - 1, 0, TAU); ctx.stroke();
-      // zerbrechende Ringe: kurz weiß, weiten sich, verblassen
+      ctx.beginPath(); ctx.arc(cx, cy, sim.h * z - 1, 0, TAU); ctx.stroke();
       fx.rings = (fx.rings || []).filter((q) => vt - q.t0 < 0.4);
       for (const q of fx.rings) {
         const p = (vt - q.t0) / 0.4;
         ctx.globalAlpha = (1 - p) * 0.9;
         ctx.strokeStyle = `hsl(${q.hue},100%,${85 - 20 * p}%)`;
         ctx.lineWidth = 3 * (1 - p) + 1;
-        ctx.beginPath(); ctx.arc(cx, cy, q.r * (1 + 0.05 * H.ease(p)), 0, TAU); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, q.r * z * (1 + 0.05 * H.ease(p)), 0, TAU); ctx.stroke();
       }
       ctx.globalAlpha = 1;
-      H.outlinedText(H.fmt(sim.n - sim.passed), cx, cy + 16, H.FONT_IT, 44, 300, 'rgba(255,255,255,0.85)', 0);
-      // Power-ups
+      H.outlinedText(H.fmt(sim.passed), cx, cy + 16, H.FONT_IT, 44, 300, 'rgba(255,255,255,0.85)', 0);
       for (const p of sim.powerups) {
         const age = sim.t - p.t0;
         const pop = H.ease(Math.min(1, age / 0.3));
-        const px = cx + p.u * sim.h;
-        const py = cy + p.v * sim.h;
+        const px = cx + p.u * sim.h * z;
+        const py = cy + p.v * sim.h * z;
         const r = 22 * pop * (1 + 0.06 * Math.sin(age * 6));
         ctx.save();
         ctx.globalAlpha = age > 6 ? Math.max(0, 7 - age) : 1;
@@ -841,24 +846,25 @@
         ctx.restore();
         H.outlinedText(PU[p.kind].label, px, py + 9 * pop, H.FONT_IT, 26 * pop, 60, '#fff', 5);
       }
-      // Bälle: weicher, auslaufender Schweif + Glow
       fx.trails = fx.trails || {};
       for (const b of sim.balls) {
-        const sx = cx + b.x;
-        const sy = cy + b.y;
+        // Schweif in Loch-Einheiten speichern, damit er beim Zoomen mitwandert
         const tr = (fx.trails[b.id] = fx.trails[b.id] || []);
-        tr.unshift(sx, sy);
+        tr.unshift(b.x / sim.h, b.y / sim.h);
         if (tr.length > 44) tr.length = 44;
         const hue = b.fastUntil > sim.t ? 50 : b.bigUntil > sim.t ? 140 : 275;
-        const br = sim.ballR(b);
+        const br = sim.ballR(b) * z;
+        const k2 = sim.h * z;
         ctx.globalCompositeOperation = 'lighter';
         for (let k = tr.length / 2 - 1; k >= 1; k--) {
           const f = k / 22;
           ctx.globalAlpha = 0.35 * (1 - f);
           ctx.fillStyle = `hsl(${hue},100%,65%)`;
-          ctx.beginPath(); ctx.arc(tr[2 * k], tr[2 * k + 1], br * (1 - 0.7 * f), 0, TAU); ctx.fill();
+          ctx.beginPath(); ctx.arc(cx + tr[2 * k] * k2, cy + tr[2 * k + 1] * k2, br * (1 - 0.7 * f), 0, TAU); ctx.fill();
         }
         ctx.globalAlpha = 1;
+        const sx = cx + b.x * z;
+        const sy = cy + b.y * z;
         const g = br * 4.2;
         ctx.drawImage(H.glowSprite(hue), sx - g / 2, sy - g / 2, g, g);
         ctx.globalCompositeOperation = 'source-over';
@@ -868,7 +874,9 @@
       ctx.globalCompositeOperation = 'lighter';
       for (const p of fx.parts) {
         ctx.globalAlpha = 1 - p.life / p.max; ctx.fillStyle = p.col;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, TAU); ctx.fill();
+        const px = p.tun ? cx + p.x * z : p.x;
+        const py = p.tun ? cy + p.y * z : p.y;
+        ctx.beginPath(); ctx.arc(px, py, p.s, 0, TAU); ctx.fill();
       }
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';

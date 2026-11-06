@@ -866,7 +866,7 @@
     }
     let sx = 0;
     let sy = 0;
-    const sh = fmtFx.shake;
+    const sh = null; // ruhig: kein Wackeln (Nutzerwunsch)
     if (sh && vt - sh.t0 < sh.dur) {
       const p = 1 - (vt - sh.t0) / sh.dur;
       sx = (rng() * 2 - 1) * sh.amp * p * p;
