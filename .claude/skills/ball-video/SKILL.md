@@ -59,6 +59,11 @@ Länge oder welcher Hook besser läuft. Diese Erkenntnisse kommen in die Regeln 
 
 ## Gelernte Regeln (immer anwenden, mit Quelle erweitern)
 
+- **Satisfying = ruhig und sauber** (Nutzer-Kritik 06.11.: „Kamera bewegt sich so viel, schlechte Grafik“): Kamera fest,
+  kein Folgen und kein Zoom pro Treffer, kein Wackeln. Linien mit mindestens 3 px Abstand, sonst gibt es Moiré. Kein Bloom
+  über feinen Linien. Effekte weich: aufleuchten, weiten, verblassen; runde Funken statt eckiger Splitter. Vor dem
+  Abschicken immer eine Nahaufnahme (crop) prüfen.
+
 - **4 Test-Formate (06.11., nach Nutzer-Screenshots aus der „Für dich“-Seite):** `--scene dense` (500 Ringe in 1 Minute,
   Vorbild 1,7K Likes), `layers` („Was ist ganz unten?“, 40K Likes), `battle` („Wer gewinnt?“, 296K Likes, eigene Teams
   statt Marken-Logos), `press` (Hydraulische Presse, 62K Likes, eigene Auslegung). Code in `formats.js`. Dazu (Nutzer-Vorlagen 06.11.): `power` („Jeder Treffer = ×2 Kraft“, Vorbild Cool Balls) und

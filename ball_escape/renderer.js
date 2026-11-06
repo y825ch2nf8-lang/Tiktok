@@ -874,7 +874,7 @@
     }
     ctx.setTransform(scale, 0, 0, scale, sx * scale, sy * scale);
     FMT.draw(ctx, sim, vt, o, fmtFx, HELP);
-    if (!bg) bloom();
+    if (!bg && o.scene !== 'tunnel') bloom(); // Tunnel: feine Linien bleiben scharf
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
     FMT.drawText(ctx, sim, vt, o, fmtFx, HELP);
     if (fmtFx.flash != null && vt - fmtFx.flash < 0.06) {

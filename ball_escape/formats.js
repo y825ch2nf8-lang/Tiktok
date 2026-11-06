@@ -41,7 +41,7 @@
     layers: { layerN: 240, layerGap: 7, layerTop: 760, boxL: 110, boxRight: 930, gravity: 1800, ballR: 18, startSpeed: 420, bounceMin: 950, breakPerSpeed: 120, outroDur: 4.5 },
     battle: { teams: 4, ballR: 58, startSpeed: 640, gravity: 0, hp: 100, arenaR: 430, outroDur: 4.5, cy: 980 },
     power: { gravity: 2600, ballR: 16, outroDur: 3.5, blockTop: 980, blockBottom: 1560, boxL: 150, boxRight: 930, bounceTop: 560, cy: 1100 },
-    tunnel: { tunnelN: 300, tunnelR0: 140, tunnelStep: 6, tunnelBins: 360, tunnelSpeed: 4, tunnelDepth: [20, 50], tunnelWidth: [18, 22], tunnelClear: 0.65, outroDur: 3.5, cy: 920 },
+    tunnel: { tunnelN: 140, tunnelR0: 95, tunnelStep: 3, tunnelBins: 360, tunnelSpeed: 3, ballR: 10, outroDur: 3.5, cy: 940 },
     press: { goal: 500, arenaR: 430, ballR: 18, ballRMin: 7, startSpeed: 650, gravity: 250, pressOpen: 300, pressH: 420, pressPeriod: 1.2, outroDur: 4, cy: 1000 },
   };
 
@@ -541,13 +541,13 @@
       this.powerups = [];
       this.nextPU = 1.5 + this.rng() * 1.5;
       this.h = this.r(0);
-      this.br = this.h * 0.035;
+      this.br = o.ballR;
       const a = this.rng() * TAU;
       this.ball(0, 0, Math.cos(a), Math.sin(a), { bigUntil: -1, fastUntil: -1 });
     }
     r(i) { return this.o.tunnelR0 + i * this.o.tunnelStep; }
-    ballR(b) { return this.h * 0.035 * (b.bigUntil > this.t ? 1.9 : 1); }
-    speed(b) { return this.h * this.o.tunnelSpeed * (b.fastUntil > this.t ? 1.6 : 1); }
+    ballR(b) { return this.o.ballR * (b.bigUntil > this.t ? 1.8 : 1); }
+    speed(b) { return Math.max(520, this.h * this.o.tunnelSpeed) * (b.fastUntil > this.t ? 1.6 : 1); }
     spawnPowerup() {
       const kinds = ['x2', 'big', 'fast'];
       const kind = this.balls.length >= 4 ? kinds[1 + Math.floor(this.rng() * 2)] : kinds[Math.floor(this.rng() * 3)];
@@ -582,7 +582,7 @@
         const br = this.ballR(b);
         for (const p of this.powerups) {
           if (p.taken) continue;
-          if (Math.hypot(b.x - p.u * this.h, b.y - p.v * this.h) < br + this.h * 0.09) {
+          if (Math.hypot(b.x - p.u * this.h, b.y - p.v * this.h) < br + 28) {
             p.taken = true;
             if (p.kind === 'x2') this.ball(b.x, b.y, -b.vx, b.vy, { bigUntil: -1, fastUntil: -1 });
             else if (p.kind === 'big') b.bigUntil = this.t + 5;
@@ -646,8 +646,14 @@
       fx.newBlock = ev.t;
       fx.shake = { t0: ev.t, amp: 14, dur: 0.3 };
     } else if (ev.type === 'tunnelhit') {
-      const r = Math.hypot(ev.x, ev.y);
-      for (let k = 0; k < 24; k++) { const a = rng() * TAU; fx.parts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, vx: Math.cos(a) * r * 0.6, vy: Math.sin(a) * r * 0.6, life: 0, max: 0.5, col: '#E9E3FF', s: 2, world: true }); }
+      fx.rings = fx.rings || [];
+      fx.rings.push({ r: sim.r(ev.j), t0: ev.t, hue: 255 + 115 * (ev.j / sim.n) });
+      const a0 = Math.atan2(ev.y, ev.x);
+      for (let k = 0; k < 10; k++) {
+        const a = a0 + (rng() - 0.5) * 1.2;
+        const sp = 60 + rng() * 140;
+        fx.parts.push({ x: o.cx + Math.cos(a) * sim.r(ev.j), y: o.cy + Math.sin(a) * sim.r(ev.j), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 0.5 + rng() * 0.3, col: `hsl(${255 + 115 * (ev.j / sim.n)},100%,80%)`, s: 2.5, round: true });
+      }
     } else if (ev.type === 'powerup') {
       const L = { x2: { de: '×2 BALL!', en: '×2 BALL!' }, big: { de: 'GRÖSSER!', en: 'BIGGER!' }, fast: { de: 'SCHNELLER!', en: 'FASTER!' } };
       const col = { x2: '#FF2D95', big: '#34C759', fast: '#FFD60A' }[ev.kind];
@@ -664,7 +670,7 @@
     } else if (ev.type === 'break' && ev.final) {
       fx.flash = ev.t;
       fx.final = ev;
-      fx.shake = { t0: ev.t, amp: 16, dur: 0.4 };
+      fx.shake = { t0: ev.t, amp: o.scene === 'tunnel' ? 0 : 16, dur: 0.4 }; // Tunnel: ruhig, kein Wackeln
       for (let k = 0; k < 160; k++) { const a = rng() * TAU; const sp = 200 + rng() * 900; fx.parts.push({ x: o.cx, y: o.cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 1 + rng() * 0.6, col: `hsl(${rng() * 360},90%,65%)`, s: 2 + rng() * 3, world: o.scene === 'layers' }); }
     }
   }
@@ -795,77 +801,77 @@
       const b = sim.balls[0];
       H.outlinedText(H.fmt(sim.done ? sim.power / 2 : sim.power), b.x, b.y - 40, H.FONT_IT, 46, 400, '#fff', 8);
     } else if (o.scene === 'tunnel') {
-      const b = sim.balls[0];
-      const zt = 300 / sim.h;
-      fx.zoom = fx.zoom == null ? zt : fx.zoom + (zt - fx.zoom) * 0.15;
-      const z = fx.zoom;
-      const cx = 540 - b.x * z * 0.25;
-      const cy = o.cy - b.y * z * 0.25;
-      const step = Math.max(1, Math.ceil(4.5 / (o.tunnelStep * z))); // sichtbare feine Linien statt Farbfläche
-      const maxR = 1700 / z;
-      const B = sim.B;
-      const HUES = [265, 330, 48, 95, 170, 215];
-      ctx.lineWidth = 1.3;
-      for (let i = sim.passed; i < sim.n && sim.r(i) < maxR; i += step) {
-        const R = sim.r(i) * z;
-        const sec = Math.floor((i / sim.n) * HUES.length);
-        ctx.strokeStyle = `hsl(${HUES[sec]},70%,${i % (2 * step) ? 62 : 74}%)`;
-        ctx.beginPath();
-        const base = i * B;
-        let k = 0;
-        // zusammenhängende, intakte Bogenstücke zeichnen
-        while (k < B) {
-          if (!sim.alive[base + k]) { k++; continue; }
-          let e = k;
-          while (e < B && sim.alive[base + e]) e++;
-          const a0 = (k / B) * TAU;
-          const a1 = (e / B) * TAU;
-          ctx.moveTo(cx + Math.cos(a0) * R, cy + Math.sin(a0) * R);
-          ctx.arc(cx, cy, R, a0, a1);
-          k = e;
-        }
-        ctx.stroke();
+      const cx = o.cx;
+      const cy = o.cy;
+      // feine Ringe, fließender Farbverlauf (Lila -> Pink -> Orange), keine Kamera-Bewegung
+      ctx.lineWidth = 1.7;
+      for (let i = sim.passed; i < sim.n; i++) {
+        const f = i / sim.n;
+        ctx.strokeStyle = `hsl(${255 + 115 * f},85%,${i % 2 ? 58 : 68}%)`;
+        ctx.beginPath(); ctx.arc(cx, cy, sim.r(i), 0, TAU); ctx.stroke();
       }
-      H.outlinedText(H.fmt(sim.n - sim.passed), cx, cy + 18, H.FONT_IT, 52, 400, 'rgba(255,255,255,0.75)', 0);
+      // sanfter Rand am Loch
+      const hr = sim.r(Math.min(sim.passed, sim.n - 1));
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, hr - 1, 0, TAU); ctx.stroke();
+      // zerbrechende Ringe: kurz weiß, weiten sich, verblassen
+      fx.rings = (fx.rings || []).filter((q) => vt - q.t0 < 0.4);
+      for (const q of fx.rings) {
+        const p = (vt - q.t0) / 0.4;
+        ctx.globalAlpha = (1 - p) * 0.9;
+        ctx.strokeStyle = `hsl(${q.hue},100%,${85 - 20 * p}%)`;
+        ctx.lineWidth = 3 * (1 - p) + 1;
+        ctx.beginPath(); ctx.arc(cx, cy, q.r * (1 + 0.05 * H.ease(p)), 0, TAU); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      H.outlinedText(H.fmt(sim.n - sim.passed), cx, cy + 16, H.FONT_IT, 44, 300, 'rgba(255,255,255,0.85)', 0);
       // Power-ups
       for (const p of sim.powerups) {
         const age = sim.t - p.t0;
-        const pop = H.ease(Math.min(1, age / 0.25));
-        const px = cx + p.u * sim.h * z;
-        const py = cy + p.v * sim.h * z;
-        const r = 30 * pop * (1 + 0.08 * Math.sin(age * 8));
+        const pop = H.ease(Math.min(1, age / 0.3));
+        const px = cx + p.u * sim.h;
+        const py = cy + p.v * sim.h;
+        const r = 22 * pop * (1 + 0.06 * Math.sin(age * 6));
         ctx.save();
         ctx.globalAlpha = age > 6 ? Math.max(0, 7 - age) : 1;
-        ctx.shadowColor = PU[p.kind].col; ctx.shadowBlur = 25;
+        ctx.shadowColor = PU[p.kind].col; ctx.shadowBlur = 20;
         ctx.fillStyle = PU[p.kind].col;
         ctx.beginPath(); ctx.arc(px, py, r, 0, TAU); ctx.fill();
-        ctx.shadowBlur = 0; ctx.lineWidth = 4; ctx.strokeStyle = '#fff'; ctx.stroke();
+        ctx.shadowBlur = 0; ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
         ctx.restore();
-        H.outlinedText(PU[p.kind].label, px, py + 12 * pop, H.FONT_IT, 34 * pop, 80, '#fff', 6);
+        H.outlinedText(PU[p.kind].label, px, py + 9 * pop, H.FONT_IT, 26 * pop, 60, '#fff', 5);
       }
-      // Bälle mit Schweif (Bildschirmkoordinaten)
+      // Bälle: weicher, auslaufender Schweif + Glow
       fx.trails = fx.trails || {};
       for (const b of sim.balls) {
-        const sx = cx + b.x * z;
-        const sy = cy + b.y * z;
+        const sx = cx + b.x;
+        const sy = cy + b.y;
         const tr = (fx.trails[b.id] = fx.trails[b.id] || []);
         tr.unshift(sx, sy);
-        if (tr.length > 40) tr.length = 40;
-        const col = b.fastUntil > sim.t ? '#FFD60A' : b.bigUntil > sim.t ? '#5CFF8A' : '#8B7BFF';
-        ctx.strokeStyle = col; ctx.lineWidth = 5; ctx.lineCap = 'round';
-        ctx.beginPath();
-        for (let k = 0; k < tr.length; k += 2) (k ? ctx.lineTo : ctx.moveTo).call(ctx, tr[k], tr[k + 1]);
-        ctx.stroke();
-        ctx.fillStyle = b.fastUntil > sim.t ? '#FFD60A' : b.bigUntil > sim.t ? '#5CFF8A' : '#FFE14D';
-        ctx.beginPath(); ctx.arc(sx, sy, Math.max(6, sim.ballR(b) * z), 0, TAU); ctx.fill();
+        if (tr.length > 44) tr.length = 44;
+        const hue = b.fastUntil > sim.t ? 50 : b.bigUntil > sim.t ? 140 : 275;
+        const br = sim.ballR(b);
+        ctx.globalCompositeOperation = 'lighter';
+        for (let k = tr.length / 2 - 1; k >= 1; k--) {
+          const f = k / 22;
+          ctx.globalAlpha = 0.35 * (1 - f);
+          ctx.fillStyle = `hsl(${hue},100%,65%)`;
+          ctx.beginPath(); ctx.arc(tr[2 * k], tr[2 * k + 1], br * (1 - 0.7 * f), 0, TAU); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        const g = br * 4.2;
+        ctx.drawImage(H.glowSprite(hue), sx - g / 2, sy - g / 2, g, g);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(sx, sy, br * 0.85, 0, TAU); ctx.fill();
       }
+      ctx.globalCompositeOperation = 'lighter';
       for (const p of fx.parts) {
-        if (!p.world) continue;
         ctx.globalAlpha = 1 - p.life / p.max; ctx.fillStyle = p.col;
-        ctx.fillRect(cx + p.x * z - 1, cy + p.y * z - 1, 3, 3);
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, TAU); ctx.fill();
       }
       ctx.globalAlpha = 1;
-      for (const f of fx.floats) { if (f.tunnel) continue; }
+      ctx.globalCompositeOperation = 'source-over';
       return;
     } else if (o.scene === 'press') {
       const w = sim.w;

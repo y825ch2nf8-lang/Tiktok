@@ -80,7 +80,7 @@ function parseArgs(argv) {
   if (a.threads && a.music === 'asmr' && !a.asmr) a.asmr = 'drop'; // Nutzer-Wahl: Wassertropfen
   // Kurz (≈35 s) = mehr Leute schauen bis zum Ende -> mehr Likes & Push. Lang (≈67 s) erst ab 10K Followern
   // sinnvoll (Creator Rewards). Standard: Box kurz, Ringe lang.
-  const FORMAT_TARGET = { dense: 58, layers: 30, battle: 20, press: 30, power: 19, tunnel: 40 };
+  const FORMAT_TARGET = { dense: 58, layers: 30, battle: 20, press: 30, power: 19, tunnel: 35 };
   if (FORMAT_TARGET[a.scene]) {
     if (a.target == null) a.target = FORMAT_TARGET[a.scene];
     if (a.sound === 'music') a.music = 'asmr';
