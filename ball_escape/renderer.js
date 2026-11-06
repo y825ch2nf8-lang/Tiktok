@@ -640,7 +640,7 @@
       ctx.fillText(p.text, o.cx, o.cy);
       if (p.label) {
         // Instrument bleibt länger stehen als das "+2"
-        const la = clamp(1 - (age - (p.big ? 2.2 : 1.0)) / 0.5, 0, 1) * clamp(age / 0.12, 0, 1);
+        const la = clamp(1 - (age - (p.big ? (o.loop === 'seamless' ? 0.9 : 2.2) : 1.0)) / 0.4, 0, 1) * clamp(age / 0.12, 0, 1);
         if (la > 0) {
           ctx.globalAlpha = la;
           ctx.textBaseline = 'alphabetic';
@@ -654,6 +654,7 @@
   }
 
   function drawOutroCard(since, untilEnd) {
+    if (o.loop === 'seamless') return; // nahtloser Loop: keine Schlusstafel, direkt zurück zum Start
     // Großer End-Zähler + Teil-2-Teaser
     const a = clamp((since - 0.6) / 0.4, 0, 1) * clamp((untilEnd - 2.4) / 0.4, 0, 1);
     if (a <= 0) return;
@@ -730,18 +731,20 @@
     }
     ctx.setTransform(scale, 0, 0, scale, sx * scale, sy * scale);
 
+    const seamless = o.loop === 'seamless';
+    const G = seamless ? 1.3 : 2.4; // Dauer: Arena wächst zurück in den Startzustand
     let grow = null;
-    if (since >= 0 && untilEnd <= 2.4) {
-      const t = 2.4 - untilEnd; // 0..2.4
-      grow = (i) => (t - (i / Math.max(1, o.rings - 1)) * 0.9) / 0.6;
+    if (since >= 0 && untilEnd <= G) {
+      const t = G - untilEnd;
+      grow = (i) => (t - (i / Math.max(1, o.rings - 1)) * (G * 0.375)) / (G * 0.25);
     }
     if (o.threads && !grow) drawThreads();
     drawRings(vt, grow);
     drawFx();
-    if (since < 0 || untilEnd > 2.4) drawBalls(vt);
+    if (since < 0 || untilEnd > G) drawBalls(vt);
     if (grow) {
       // Startball erscheint wieder in der Mitte -> nahtloser Loop
-      const a = clamp((2.4 - untilEnd - 1.0) / 0.5, 0, 1);
+      const a = clamp((G - untilEnd - G * 0.42) / (G * 0.2), 0, 1);
       if (a > 0) {
         const br = o.ballR;
         ctx.globalAlpha = a;
@@ -776,14 +779,14 @@
     drawPopups(vt);
     let hookA = 1;
     let hudA = 1;
-    if (since >= 0) {
+    if (since >= 0 && !seamless) {
       const fadeOut = 1 - clamp((since - 0.3) / 0.4, 0, 1);
       const fadeIn = clamp((2.0 - untilEnd) / 0.6, 0, 1);
       hookA = Math.max(fadeOut, fadeIn);
       hudA = Math.max(fadeOut, fadeIn);
     }
     drawOutroCard(since, untilEnd);
-    if (since >= 0 && untilEnd < 2.0) {
+    if (since >= 0 && untilEnd < (seamless ? 0.45 : 2.0)) {
       // Loop-Ende: HUD zeigt wieder den Startzustand
       drawHud(hudA, true);
       drawHeader(hookA);

@@ -40,7 +40,7 @@ function parseArgs(argv) {
     out: null,
     serve: false,
     port: 8080,
-    crf: 17,
+    crf: 23, // ≈ 20–30 MB: sieht auf TikTok gleich aus, lässt sich aber am Handy laden
     hook: null,
     seedStart: 1,
     music: 'layers',
@@ -52,6 +52,7 @@ function parseArgs(argv) {
     sound: 'music',
     length: null,
     threads: false,
+    loop: null,
     asmr: null,
   };
   for (let i = 2; i < argv.length; i++) {
@@ -66,7 +67,7 @@ function parseArgs(argv) {
         a[k] = Number(next()); break;
       case 'seed-start': a.seedStart = Number(next()); break;
       case 'seed': { const v = next(); a.seed = v === 'auto' ? 'auto' : Number(v); break; }
-      case 'mode': case 'melody': case 'out': case 'hook': case 'music': case 'scene': case 'skin': case 'lang': case 'watermark': case 'sound': case 'asmr': case 'length': a[k] = next(); break;
+      case 'mode': case 'melody': case 'out': case 'hook': case 'music': case 'scene': case 'skin': case 'lang': case 'watermark': case 'sound': case 'asmr': case 'length': case 'loop': a[k] = next(); break;
       case 'goal': a.goal = Number(next()); break;
       default: throw new Error('Unbekannte Option: ' + argv[i] + ' (siehe --help)');
     }
@@ -113,7 +114,7 @@ function captionFor(a, sum, mel) {
       : hook;
     return {
       hook: q,
-      caption: en ? `${q} 😳 Sound on 🔊` : `${q} 😳 Ton an 🔊`,
+      caption: en ? `${q} 😳 Watch till the end 👀 Sound on 🔊` : `${q} 😳 Bis zum Ende schauen 👀 Ton an 🔊`,
       hashtags: ['#satisfyingvideos', '#bouncingball', '#asmr', '#physics'],
       pinnedComment: en
         ? `${balls} balls 🔥 Which sound next: pop, click or glass? 👇`
@@ -192,6 +193,7 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
   const pacing = a.length === 'short' ? { minFirst: 0.8, maxFirst: 3, maxGap: 6 } : {};
   if (a.skin) simOpts.skin = a.skin;
   if (a.threads) simOpts.threads = true;
+  if (a.loop === 'seamless') Object.assign(simOpts, { loop: 'seamless', outroDur: 2.4, slowmoDur: 0.5 });
   if (a.watermark) simOpts.watermark = a.watermark;
   if (a.hook) simOpts.hook = a.hook;
 
@@ -232,7 +234,7 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
 
     // 3) Frames -> FFmpeg
     const date = new Date().toISOString().slice(0, 10);
-    const soundTag = (a.threads ? 'faden_' : '') + (a.music === 'asmr' ? 'asmr-' + (a.asmr || audio.ASMR_FOR_SKIN[simOpts.skin || 'smiley']) : melodyName);
+    const soundTag = (a.loop === 'seamless' ? 'loop_' : '') + (a.threads ? 'faden_' : '') + (a.music === 'asmr' ? 'asmr-' + (a.asmr || audio.ASMR_FOR_SKIN[simOpts.skin || 'smiley']) : melodyName);
     const name = `${date}_ball-escape_${a.scene === 'box' ? 'box' + a.goal : a.rings + 'ringe'}_${simOpts.skin || 'smiley'}_${soundTag}_${a.lang}_seed${seed}${a.draft ? '_draft' : ''}`;
     const outPath = path.resolve((a.out && a.melody.indexOf(',') < 0 && a.out) || path.join(ROOT, 'output', 'finished', name + '.mp4'));
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
@@ -240,7 +242,7 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
       '-y', '-loglevel', 'error',
       '-f', 'image2pipe', '-framerate', String(a.fps), '-c:v', 'mjpeg', '-i', '-',
       '-i', wavPath,
-      '-c:v', 'libx264', '-preset', a.draft ? 'veryfast' : 'slow', '-crf', String(a.draft ? 23 : a.crf),
+      '-c:v', 'libx264', '-preset', a.draft ? 'veryfast' : 'medium', '-crf', String(a.draft ? 26 : a.crf), '-maxrate', '8M', '-bufsize', '16M',
       '-pix_fmt', 'yuv420p', '-r', String(a.fps), '-g', String(a.fps * 2),
       '-c:a', 'aac', '-b:a', '192k', '-ar', '48000',
       '-shortest', '-movflags', '+faststart', outPath,

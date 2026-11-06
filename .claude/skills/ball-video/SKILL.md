@@ -67,6 +67,9 @@ Länge oder welcher Hook besser läuft. Diese Erkenntnisse kommen in die Regeln 
   (`maxFirst`).
 - **Die erste Sekunde entscheidet:** v1 verlor die meisten Zuschauer bei 0:01 (Ø 13,9 s, 0,84 % ganz gesehen). Ab dem
   ersten Frame muss sich etwas bewegen oder aufbauen. Likes kamen bei 0:04, sobald etwas passierte.
+- **Nahtloser Loop (`--loop seamless`):** keine Schlusstafel; nach der Explosion wächst die Arena in 1,3 s zurück, der
+  letzte Frame ist identisch mit dem ersten. Zuschauer schauen ungewollt nochmal (Wunsch des Nutzers 06.11.).
+- **Dateigröße:** Standard jetzt crf 23 (≈ 20–25 MB statt 100 MB). 100-MB-Dateien ließen sich am Handy nicht laden.
 - **ASMR-Standard = Wassertropfen (`drop`).** Der Nutzer hat am 06.11. aus 3 Hörproben (Thup, Wassertropfen, leise gezupft)
   den Wassertropfen gewählt.
 - **ASMR muss leise und weich sein.** Nutzer-Feedback 05.11.: Das Level-up-Ding (FM-Glocke, wurde immer höher) und das
