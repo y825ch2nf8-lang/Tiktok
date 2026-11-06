@@ -41,7 +41,7 @@
     layers: { layerN: 240, layerGap: 7, layerTop: 760, boxL: 110, boxRight: 930, gravity: 1800, ballR: 18, startSpeed: 420, bounceMin: 950, breakPerSpeed: 120, outroDur: 4.5 },
     battle: { teams: 4, ballR: 58, startSpeed: 640, gravity: 0, hp: 100, arenaR: 430, outroDur: 4.5, cy: 980 },
     power: { gravity: 2600, ballR: 16, outroDur: 3.5, blockTop: 980, blockBottom: 1560, boxL: 150, boxRight: 930, bounceTop: 560, cy: 1100 },
-    tunnel: { tunnelN: 1000, tunnelR0: 140, tunnelStep: 6, tunnelBins: 360, tunnelSpeed: 9, tunnelDepth: [20, 50], tunnelWidth: [18, 22], tunnelClear: 0.65, outroDur: 3.5, cy: 920 },
+    tunnel: { tunnelN: 300, tunnelR0: 140, tunnelStep: 6, tunnelBins: 360, tunnelSpeed: 4, tunnelDepth: [20, 50], tunnelWidth: [18, 22], tunnelClear: 0.65, outroDur: 3.5, cy: 920 },
     press: { goal: 500, arenaR: 430, ballR: 18, ballRMin: 7, startSpeed: 650, gravity: 250, pressOpen: 300, pressH: 420, pressPeriod: 1.2, outroDur: 4, cy: 1000 },
   };
 
@@ -536,79 +536,85 @@
       super(o);
       this.n = o.tunnelN;
       this.B = o.tunnelBins;
-      this.alive = new Uint8Array(this.n * this.B).fill(1);
-      this.count = new Int16Array(this.n).fill(this.B);
+      this.alive = new Uint8Array(this.n * this.B).fill(1); // Struktur bleibt für das Zeichnen
       this.passed = 0;
-      this.scaleBall();
+      this.powerups = [];
+      this.nextPU = 1.5 + this.rng() * 1.5;
+      this.h = this.r(0);
+      this.br = this.h * 0.035;
       const a = this.rng() * TAU;
-      this.ball(0, 0, Math.cos(a) * this.speed, Math.sin(a) * this.speed);
+      this.ball(0, 0, Math.cos(a), Math.sin(a), { bigUntil: -1, fastUntil: -1 });
     }
     r(i) { return this.o.tunnelR0 + i * this.o.tunnelStep; }
-    scaleBall() {
-      const h = this.r(Math.min(this.passed, this.n - 1));
-      this.br = h * 0.035;
-      this.speed = h * this.o.tunnelSpeed;
-    }
-    carve(j, bin) {
-      // zackiger Zacken: breit an der Basis, spitz nach außen
-      const o = this.o;
-      const D = o.tunnelDepth[0] + Math.floor(this.rng() * o.tunnelDepth[1]);
-      const w0 = o.tunnelWidth[0] + this.rng() * o.tunnelWidth[1];
-      for (let m = 0; m < D && j + m < this.n; m++) {
-        const ring = j + m;
-        const w = Math.round(w0 * Math.pow(1 - m / D, 1.5) + this.rng() * 2);
-        for (let q = -w; q <= w; q++) {
-          const idx = ring * this.B + ((bin + q + this.B * 4) % this.B);
-          if (this.alive[idx]) { this.alive[idx] = 0; this.count[ring]--; }
-        }
-        // halb zerstörte Ringe fallen ganz weg
-        if (this.count[ring] > 0 && this.count[ring] < this.B * o.tunnelClear) {
-          this.alive.fill(0, ring * this.B, (ring + 1) * this.B);
-          this.count[ring] = 0;
-        }
+    ballR(b) { return this.h * 0.035 * (b.bigUntil > this.t ? 1.9 : 1); }
+    speed(b) { return this.h * this.o.tunnelSpeed * (b.fastUntil > this.t ? 1.6 : 1); }
+    spawnPowerup() {
+      const kinds = ['x2', 'big', 'fast'];
+      const kind = this.balls.length >= 4 ? kinds[1 + Math.floor(this.rng() * 2)] : kinds[Math.floor(this.rng() * 3)];
+      let x = 0;
+      let y = 0;
+      for (let k = 0; k < 12; k++) {
+        const a = this.rng() * TAU;
+        const r = Math.sqrt(this.rng()) * this.h * 0.7;
+        x = Math.cos(a) * r; y = Math.sin(a) * r;
+        if (this.balls.every((b) => Math.hypot(b.x - x, b.y - y) > this.h * 0.35)) break;
       }
-      let grew = false;
-      while (this.passed < this.n && this.count[this.passed] === 0) { this.passed++; grew = true; }
-      if (grew) {
-        this.scaleBall();
-        const b = this.balls[0];
-        const sp = Math.hypot(b.vx, b.vy) || 1;
-        b.vx *= this.speed / sp; b.vy *= this.speed / sp;
-        this.inside = this.n - this.passed;
-        this.stageTo(this.passed, this.n);
-        if (this.passed >= this.n) this.finish({ balls: 0 });
-      }
+      // in Loch-Einheiten speichern, damit es beim Wachsen mitwandert
+      this.powerups.push({ kind, u: x / this.h, v: y / this.h, t0: this.t, id: this.nextId++ });
     }
     substep() {
       this.t += this.dt;
-      const b = this.balls[0];
-      b.x += b.vx * this.dt;
-      b.y += b.vy * this.dt;
-      if (this.done) return;
-      const d = Math.hypot(b.x, b.y) || 1e-9;
-      const ang = Math.atan2(b.y, b.x);
-      const bin = Math.floor(((((ang % TAU) + TAU) % TAU) / TAU) * this.B) % this.B;
-      for (let j = this.passed; j < this.n && this.r(j) < d + this.br; j++) {
-        if (!this.alive[j * this.B + bin]) continue;
+      if (this.done) {
+        for (const b of this.balls) { b.x += b.vx * this.speed(b) * this.dt; b.y += b.vy * this.speed(b) * this.dt; }
+        return;
+      }
+      if (this.t >= this.nextPU && this.powerups.length < 2) {
+        this.spawnPowerup();
+        this.nextPU = this.t + 2.5 + this.rng() * 2.5;
+      }
+      this.powerups = this.powerups.filter((p) => this.t - p.t0 < 7);
+      const R = this.r(this.passed);
+      for (const b of this.balls.slice()) {
+        // b.vx/b.vy = Richtung (Einheitsvektor); Tempo hängt an der Lochgröße
+        const sp = this.speed(b);
+        b.x += b.vx * sp * this.dt;
+        b.y += b.vy * sp * this.dt;
+        const br = this.ballR(b);
+        for (const p of this.powerups) {
+          if (p.taken) continue;
+          if (Math.hypot(b.x - p.u * this.h, b.y - p.v * this.h) < br + this.h * 0.09) {
+            p.taken = true;
+            if (p.kind === 'x2') this.ball(b.x, b.y, -b.vx, b.vy, { bigUntil: -1, fastUntil: -1 });
+            else if (p.kind === 'big') b.bigUntil = this.t + 5;
+            else b.fastUntil = this.t + 5;
+            this.events.push({ type: 'powerup', t: this.t, kind: p.kind, x: p.u * this.h, y: p.v * this.h });
+          }
+        }
+        const d = Math.hypot(b.x, b.y) || 1e-9;
+        if (d + br < R) continue;
         const ux = b.x / d;
         const uy = b.y / d;
+        b.x = ux * (R - br);
+        b.y = uy * (R - br);
         const vn = b.vx * ux + b.vy * uy;
-        const rj = this.r(j);
-        b.x = ux * Math.min(d, rj - this.br);
-        b.y = uy * Math.min(d, rj - this.br);
-        if (vn > 0) {
-          b.vx -= 2 * vn * ux; b.vy -= 2 * vn * uy;
-          const tw = (this.rng() - 0.5) * 0.6;
-          const c = Math.cos(tw);
-          const s2 = Math.sin(tw);
-          const vx = b.vx;
-          b.vx = vx * c - b.vy * s2; b.vy = vx * s2 + b.vy * c;
-          this.events.push({ type: 'tunnelhit', t: this.t, x: b.x, y: b.y, j });
-          this.note(b, this.speed, 300);
-          this.carve(j, bin);
-        }
-        break;
+        if (vn <= 0) continue;
+        b.vx -= 2 * vn * ux; b.vy -= 2 * vn * uy;
+        const tw = (this.rng() - 0.5) * 0.5;
+        const c = Math.cos(tw);
+        const s2 = Math.sin(tw);
+        const vx = b.vx;
+        b.vx = vx * c - b.vy * s2; b.vy = vx * s2 + b.vy * c;
+        // genau 1 Ring kaputt
+        this.alive.fill(0, this.passed * this.B, (this.passed + 1) * this.B);
+        this.events.push({ type: 'tunnelhit', t: this.t, x: b.x, y: b.y, j: this.passed });
+        this.note(b, 900, 300);
+        this.passed++;
+        this.h = this.r(Math.min(this.passed, this.n - 1));
+        this.inside = this.n - this.passed;
+        this.stageTo(this.passed, this.n);
+        if (this.passed >= this.n) { this.finish({ balls: 0 }); return; }
       }
+      this.powerups = this.powerups.filter((p) => !p.taken);
       this.inside = this.n - this.passed;
     }
   }
@@ -640,7 +646,8 @@
       fx.newBlock = ev.t;
       fx.shake = { t0: ev.t, amp: 14, dur: 0.3 };
     } else if (ev.type === 'tunnelhit') {
-      for (let k = 0; k < 8; k++) { const a = rng() * TAU; fx.parts.push({ x: ev.x, y: ev.y, vx: Math.cos(a) * 140, vy: Math.sin(a) * 140, life: 0, max: 0.5, col: '#E9E3FF', s: 2, world: true }); }
+      const r = Math.hypot(ev.x, ev.y);
+      for (let k = 0; k < 24; k++) { const a = rng() * TAU; fx.parts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, vx: Math.cos(a) * r * 0.6, vy: Math.sin(a) * r * 0.6, life: 0, max: 0.5, col: '#E9E3FF', s: 2, world: true }); }
     } else if (ev.type === 'powerup') {
       const L = { x2: { de: '×2 BALL!', en: '×2 BALL!' }, big: { de: 'GRÖSSER!', en: 'BIGGER!' }, fast: { de: 'SCHNELLER!', en: 'FASTER!' } };
       const col = { x2: '#FF2D95', big: '#34C759', fast: '#FFD60A' }[ev.kind];
@@ -789,8 +796,7 @@
       H.outlinedText(H.fmt(sim.done ? sim.power / 2 : sim.power), b.x, b.y - 40, H.FONT_IT, 46, 400, '#fff', 8);
     } else if (o.scene === 'tunnel') {
       const b = sim.balls[0];
-      const hole = sim.r(Math.min(sim.passed, sim.n - 1));
-      const zt = 300 / hole;
+      const zt = 300 / sim.h;
       fx.zoom = fx.zoom == null ? zt : fx.zoom + (zt - fx.zoom) * 0.15;
       const z = fx.zoom;
       const cx = 540 - b.x * z * 0.25;
@@ -821,22 +827,45 @@
         ctx.stroke();
       }
       H.outlinedText(H.fmt(sim.n - sim.passed), cx, cy + 18, H.FONT_IT, 52, 400, 'rgba(255,255,255,0.75)', 0);
-      // Ball mit Schweif (Bildschirmkoordinaten)
-      fx.trail = fx.trail || [];
-      fx.trail.unshift(cx + b.x * z, cy + b.y * z);
-      if (fx.trail.length > 40) fx.trail.length = 40;
-      ctx.strokeStyle = '#8B7BFF'; ctx.lineWidth = 5; ctx.lineCap = 'round';
-      ctx.beginPath();
-      for (let k = 0; k < fx.trail.length; k += 2) (k ? ctx.lineTo : ctx.moveTo).call(ctx, fx.trail[k], fx.trail[k + 1]);
-      ctx.stroke();
-      ctx.fillStyle = '#FFE14D';
-      ctx.beginPath(); ctx.arc(cx + b.x * z, cy + b.y * z, Math.max(6, sim.br * z), 0, TAU); ctx.fill();
+      // Power-ups
+      for (const p of sim.powerups) {
+        const age = sim.t - p.t0;
+        const pop = H.ease(Math.min(1, age / 0.25));
+        const px = cx + p.u * sim.h * z;
+        const py = cy + p.v * sim.h * z;
+        const r = 30 * pop * (1 + 0.08 * Math.sin(age * 8));
+        ctx.save();
+        ctx.globalAlpha = age > 6 ? Math.max(0, 7 - age) : 1;
+        ctx.shadowColor = PU[p.kind].col; ctx.shadowBlur = 25;
+        ctx.fillStyle = PU[p.kind].col;
+        ctx.beginPath(); ctx.arc(px, py, r, 0, TAU); ctx.fill();
+        ctx.shadowBlur = 0; ctx.lineWidth = 4; ctx.strokeStyle = '#fff'; ctx.stroke();
+        ctx.restore();
+        H.outlinedText(PU[p.kind].label, px, py + 12 * pop, H.FONT_IT, 34 * pop, 80, '#fff', 6);
+      }
+      // Bälle mit Schweif (Bildschirmkoordinaten)
+      fx.trails = fx.trails || {};
+      for (const b of sim.balls) {
+        const sx = cx + b.x * z;
+        const sy = cy + b.y * z;
+        const tr = (fx.trails[b.id] = fx.trails[b.id] || []);
+        tr.unshift(sx, sy);
+        if (tr.length > 40) tr.length = 40;
+        const col = b.fastUntil > sim.t ? '#FFD60A' : b.bigUntil > sim.t ? '#5CFF8A' : '#8B7BFF';
+        ctx.strokeStyle = col; ctx.lineWidth = 5; ctx.lineCap = 'round';
+        ctx.beginPath();
+        for (let k = 0; k < tr.length; k += 2) (k ? ctx.lineTo : ctx.moveTo).call(ctx, tr[k], tr[k + 1]);
+        ctx.stroke();
+        ctx.fillStyle = b.fastUntil > sim.t ? '#FFD60A' : b.bigUntil > sim.t ? '#5CFF8A' : '#FFE14D';
+        ctx.beginPath(); ctx.arc(sx, sy, Math.max(6, sim.ballR(b) * z), 0, TAU); ctx.fill();
+      }
       for (const p of fx.parts) {
         if (!p.world) continue;
         ctx.globalAlpha = 1 - p.life / p.max; ctx.fillStyle = p.col;
         ctx.fillRect(cx + p.x * z - 1, cy + p.y * z - 1, 3, 3);
       }
       ctx.globalAlpha = 1;
+      for (const f of fx.floats) { if (f.tunnel) continue; }
       return;
     } else if (o.scene === 'press') {
       const w = sim.w;
