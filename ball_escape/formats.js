@@ -37,7 +37,7 @@
 
   // Voreinstellungen je Format (werden in sim.js resolve() eingemischt)
   const PRESETS = {
-    dense: { denseN: 500, denseInner: 110, denseOuter: 470, denseGapDeg: 0, denseOmega: 0.55, gravity: 1100, ballR: 12, startSpeed: 1100, minBounce: 950, breakPerSpeed: 355, timeLimit: 60, outroDur: 4, cy: 950 },
+    dense: { denseN: 500, denseInner: 110, denseOuter: 470, denseGapDeg: 0, denseOmega: 0.55, gravity: 1100, ballR: 12, startSpeed: 1100, minBounce: 950, breakPerSpeed: 1100, timeLimit: 60, outroDur: 4, cy: 950 },
     layers: { layerN: 240, layerGap: 7, layerTop: 760, boxL: 110, boxRight: 930, gravity: 1800, ballR: 18, startSpeed: 420, bounceMin: 950, breakPerSpeed: 120, outroDur: 4.5 },
     battle: { teams: 4, ballR: 58, startSpeed: 640, gravity: 0, hp: 100, arenaR: 430, outroDur: 4.5, cy: 980 },
     press: { goal: 500, arenaR: 430, ballR: 18, ballRMin: 7, startSpeed: 650, gravity: 250, pressOpen: 300, pressH: 420, pressPeriod: 1.2, outroDur: 4, cy: 1000 },
@@ -105,8 +105,10 @@
       this.half = (o.denseGapDeg * Math.PI) / 360;
       this.gc0 = this.rng() * TAU;
       this.broken = 0;
+      this.powerups = [];
+      this.nextPU = 2.5 + this.rng() * 1.5;
       const a = this.rng() * TAU;
-      this.ball(o.cx, o.cy, Math.cos(a) * o.startSpeed, Math.sin(a) * o.startSpeed);
+      this.ball(o.cx, o.cy, Math.cos(a) * o.startSpeed, Math.sin(a) * o.startSpeed, { bigUntil: -1, fastUntil: -1 });
     }
     radius(i) {
       const o = this.o;
@@ -115,49 +117,97 @@
     gap(t) {
       return this.gc0 + this.o.denseOmega * t;
     }
+    ballR(b) {
+      return b.bigUntil > this.t ? this.br * 1.9 : this.br;
+    }
     breakOne(b) {
       this.events.push({ type: 'ringbreak', t: this.t, i: this.broken, x: b.x, y: b.y });
       this.broken++;
       this.stageTo(this.broken, this.n);
     }
+    spawnPowerup() {
+      const o = this.o;
+      const kinds = ['x2', 'big', 'fast'];
+      const kind = this.balls.length >= 3 ? kinds[1 + Math.floor(this.rng() * 2)] : kinds[Math.floor(this.rng() * 3)];
+      const R = this.radius(Math.min(this.broken, this.n - 1)) - 70;
+      let x = o.cx;
+      let y = o.cy;
+      for (let tries = 0; tries < 12; tries++) {
+        // nicht direkt beim Ball: der Zuschauer soll sehen, ob er es erwischt
+        const a = this.rng() * TAU;
+        const r = Math.sqrt(this.rng()) * Math.max(40, R) * 0.85;
+        x = o.cx + Math.cos(a) * r;
+        y = o.cy + Math.sin(a) * r;
+        if (this.balls.every((b) => Math.hypot(b.x - x, b.y - y) > 160)) break;
+      }
+      this.powerups.push({ kind, x, y, t0: this.t, id: this.nextId++ });
+      this.events.push({ type: 'puspawn', t: this.t, kind });
+    }
+    collect(b, p) {
+      const o = this.o;
+      if (p.kind === 'x2') {
+        this.ball(b.x, b.y, -b.vx * 0.9 + 120, b.vy * 0.9, { bigUntil: -1, fastUntil: -1 });
+      } else if (p.kind === 'big') {
+        b.bigUntil = this.t + 5;
+      } else {
+        b.fastUntil = this.t + 5;
+        b.vx *= 1.3;
+        b.vy *= 1.3;
+      }
+      this.events.push({ type: 'powerup', t: this.t, kind: p.kind, x: p.x, y: p.y });
+      void o;
+    }
     substep() {
       const o = this.o;
       this.t += this.dt;
-      const b = this.balls[0];
-      b.vy += o.gravity * this.dt;
-      b.x += b.vx * this.dt;
-      b.y += b.vy * this.dt;
+      for (const b of this.balls) {
+        b.vy += o.gravity * this.dt;
+        b.x += b.vx * this.dt;
+        b.y += b.vy * this.dt;
+      }
       if (this.done) return;
-      if (this.broken < this.n) {
+      // Power-ups erscheinen, verfallen nach 7 s
+      if (this.t >= this.nextPU && this.powerups.length < 2) {
+        this.spawnPowerup();
+        this.nextPU = this.t + 3.5 + this.rng() * 3;
+      }
+      this.powerups = this.powerups.filter((p) => this.t - p.t0 < 7);
+      for (const b of this.balls) {
+        const r = this.ballR(b);
+        for (const p of this.powerups) {
+          if (!p.taken && Math.hypot(b.x - p.x, b.y - p.y) < r + 30) {
+            p.taken = true;
+            this.collect(b, p);
+          }
+        }
+        if (this.broken >= this.n) continue;
         const dx = b.x - o.cx;
         const dy = b.y - o.cy;
         const d = Math.hypot(dx, dy) || 1e-9;
         const R = this.radius(this.broken);
-        if (d + this.br > R) {
-          const inGap = this.half > 0 && Math.abs(wrapPi(Math.atan2(dy, dx) - this.gap(this.t))) < this.half;
-          if (inGap) {
-            while (this.broken < this.n && this.radius(this.broken) < d + this.br) this.breakOne(b);
-          } else {
-            const ux = dx / d;
-            const uy = dy / d;
-            b.x = o.cx + ux * (R - this.br);
-            b.y = o.cy + uy * (R - this.br);
-            const vn = b.vx * ux + b.vy * uy;
-            if (vn > 0) {
-              b.vx -= 2 * vn * ux;
-              b.vy -= 2 * vn * uy;
-              const out = -(b.vx * ux + b.vy * uy);
-              if (out < o.minBounce) {
-                b.vx -= (o.minBounce - out) * ux;
-                b.vy -= (o.minBounce - out) * uy;
-              }
-              const k = 1 + Math.floor(vn / o.breakPerSpeed);
-              for (let j = 0; j < k && this.broken < this.n; j++) this.breakOne(b);
-              this.note(b, vn, 300);
-            }
+        if (d + r <= R) continue;
+        const ux = dx / d;
+        const uy = dy / d;
+        b.x = o.cx + ux * (R - r);
+        b.y = o.cy + uy * (R - r);
+        const vn = b.vx * ux + b.vy * uy;
+        if (vn > 0) {
+          const fast = b.fastUntil > this.t;
+          const minB = o.minBounce * (fast ? 1.3 : 1);
+          b.vx -= 2 * vn * ux;
+          b.vy -= 2 * vn * uy;
+          const out = -(b.vx * ux + b.vy * uy);
+          if (out < minB) {
+            b.vx -= (minB - out) * ux;
+            b.vy -= (minB - out) * uy;
           }
+          let k = 1 + Math.floor(vn / o.breakPerSpeed);
+          if (fast) k *= 2;
+          for (let j = 0; j < k && this.broken < this.n; j++) this.breakOne(b);
+          this.note(b, vn, 300);
         }
       }
+      this.powerups = this.powerups.filter((p) => !p.taken);
       this.inside = this.broken;
       if (this.broken >= this.n) this.finish({ success: true, time: this.t });
       else if (this.t >= o.timeLimit) this.finish({ success: false, time: o.timeLimit });
@@ -448,6 +498,11 @@
     } else if (ev.type === 'hit') {
       fx.floats.push({ x: ev.x, y: ev.y, text: `-${Math.max(ev.da, ev.dc)}`, t0: ev.t, col: '#fff' });
       for (let k = 0; k < 14; k++) { const a = rng() * TAU; fx.parts.push({ x: ev.x, y: ev.y, vx: Math.cos(a) * 300 * rng(), vy: Math.sin(a) * 300 * rng(), life: 0, max: 0.4, col: '#fff', s: 2 }); }
+    } else if (ev.type === 'powerup') {
+      const L = { x2: { de: '×2 BALL!', en: '×2 BALL!' }, big: { de: 'GRÖSSER!', en: 'BIGGER!' }, fast: { de: 'SCHNELLER!', en: 'FASTER!' } };
+      const col = { x2: '#FF2D95', big: '#34C759', fast: '#FFD60A' }[ev.kind];
+      fx.floats.push({ x: o.cx, y: o.cy + 20, text: L[ev.kind][o.lang === 'en' ? 'en' : 'de'], t0: ev.t, col, big: true });
+      for (let k = 0; k < 40; k++) { const a = rng() * TAU; const sp = 100 + rng() * 400; fx.parts.push({ x: ev.x, y: ev.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 0.6, col, s: 3 }); }
     } else if (ev.type === 'ko') {
       const c = TEAMS[ev.team].color;
       for (let k = 0; k < 80; k++) { const a = rng() * TAU; const sp = 100 + rng() * 600; fx.parts.push({ x: ev.x, y: ev.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 0.8 + rng() * 0.5, col: c, s: 2 + rng() * 4 }); }
@@ -490,7 +545,8 @@
         ctx.strokeStyle = `hsl(${268 + 52 * f},95%,${g % 2 ? 58 : 70}%)`;
         ctx.stroke();
       }
-      drawTrailBall(ctx, sim, fx, '#ffffff', 0);
+      drawPowerups(ctx, sim, vt, H);
+      sim.balls.forEach((b, i) => drawTrailBall(ctx, sim, fx, b.fastUntil > sim.t ? '#FFD60A' : b.bigUntil > sim.t ? '#5CFF8A' : '#ffffff', i, sim.ballR(b)));
     } else if (o.scene === 'layers') {
       const b = sim.balls[0];
       const target = Math.max(0, b.y - 780);
@@ -603,20 +659,45 @@
     ctx.globalAlpha = 1;
   }
 
-  function drawTrailBall(ctx, sim, fx, col, idx) {
+  function drawTrailBall(ctx, sim, fx, col, idx, radius) {
     const b = sim.balls[idx];
-    fx.trail = fx.trail || [];
-    fx.trail.unshift(b.x, b.y);
-    if (fx.trail.length > 36) fx.trail.length = 36;
-    for (let k = fx.trail.length / 2 - 1; k >= 1; k--) {
+    const r = radius || sim.br;
+    fx.trails = fx.trails || {};
+    const tr = (fx.trails[b.id] = fx.trails[b.id] || []);
+    tr.unshift(b.x, b.y);
+    if (tr.length > 36) tr.length = 36;
+    for (let k = tr.length / 2 - 1; k >= 1; k--) {
       const f = k / 18;
       ctx.globalAlpha = 0.5 * (1 - f);
       ctx.fillStyle = col;
-      ctx.beginPath(); ctx.arc(fx.trail[2 * k], fx.trail[2 * k + 1], sim.br * (1 - 0.6 * f), 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(tr[2 * k], tr[2 * k + 1], r * (1 - 0.6 * f), 0, TAU); ctx.fill();
     }
     ctx.globalAlpha = 1;
     ctx.fillStyle = col;
-    ctx.beginPath(); ctx.arc(b.x, b.y, sim.br, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.fill();
+  }
+
+  const PU = { x2: { col: '#FF2D95', label: '×2' }, big: { col: '#34C759', label: 'XL' }, fast: { col: '#FFD60A', label: '»' } };
+  function drawPowerups(ctx, sim, vt, H) {
+    for (const p of sim.powerups) {
+      const age = sim.t - p.t0;
+      const pop = H.ease(Math.min(1, age / 0.25));
+      const fade = age > 6 ? 1 - (age - 6) : 1; // blinkt aus
+      const pulse = 1 + 0.08 * Math.sin(age * 8);
+      const r = 30 * pop * pulse;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, fade);
+      ctx.shadowColor = PU[p.kind].col;
+      ctx.shadowBlur = 25;
+      ctx.fillStyle = PU[p.kind].col;
+      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 4; ctx.strokeStyle = '#fff'; ctx.stroke();
+      ctx.restore();
+      ctx.globalAlpha = Math.max(0, fade);
+      H.outlinedText(PU[p.kind].label, p.x, p.y + 12 * pop, H.FONT_IT, 34 * pop, 80, '#fff', 6);
+      ctx.globalAlpha = 1;
+    }
   }
 
   const TXT = {

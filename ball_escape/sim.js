@@ -505,8 +505,10 @@
       const breaks = this.log.filter((e) => e.type === 'break').map((e) => +e.vt.toFixed(3));
       const stageEv = this.log.filter((e) => e.type === 'stage');
       const stages = this.o.scene !== 'rings' ? stageEv.map((e) => +e.vt.toFixed(3)) : breaks;
+      const fin = this.log.find((e) => e.type === 'break' && e.final);
       return {
         scene: this.o.scene,
+        success: fin ? fin.success !== false : false,
         stages,
         seed: this.o.seed,
         completed: this.finalFrame >= 0,
@@ -530,6 +532,7 @@
       const tl = new Timeline(Object.assign({}, o, { seed }));
       const s = tl.runHeadless(o.target + o.tol + 1);
       if (!s.completed) continue;
+      if (o.scene === 'dense' && !s.success) continue; // 500-Ringe-Video: nur knapp geschaffte Läufe
       const st = s.stages;
       const gaps = st.map((b, i) => b - (i ? st[i - 1] : 0));
       const err = Math.abs(s.finalSec - o.target);

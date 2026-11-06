@@ -612,6 +612,10 @@ function renderAsmr(events, durationSec, opts) {
       const h = waterDrop(0.75 * Math.pow(2, semis / 12), Math.floor(rng() * 1e9));
       dry.add(e.vt, h, 0.16, panOf(e.x));
       send.add(e.vt, h, 0.06, panOf(e.x));
+    } else if (e.type === 'powerup') {
+      const lu = softChime();
+      dry.add(e.vt, lu, 0.16, 0);
+      send.add(e.vt, lu, 0.14, 0);
     } else if (e.type === 'stage' || (e.type === 'break' && opts.scene !== 'box')) {
       if (e.type === 'break' && e.final) continue; // Finale unten
       if (e.type === 'stage' && e.final) continue;
