@@ -80,7 +80,7 @@ node ball_escape/render.js --scene box --skin cat --melody korobeiniki --waterma
 
 | Moment | Geräusch |
 |---|---|
-| Aufprall | Standard `soft`: gedämpfter Faden-„Thup“, tief (130–260 Hz), lange Fäden etwas tiefer. Je dichter die Aufpralle, desto leiser jeder einzelne, damit es wie ein sanftes Rieseln klingt |
+| Aufprall | Standard `drop`: kleiner Wassertropfen, rund und kurz (Alternative `soft`: gedämpfter Faden-„Thup“). Je dichter die Aufpralle, desto leiser jeder einzelne, damit es wie ein sanftes Rieseln klingt |
 | Entkommen | kleiner Wassertropfen, höchstens 6 pro Sekunde, steigt bis zum Ziel nur um 1 Oktave |
 | Meilenstein | leiser, reiner Zweiklang (kein Metall, immer gleiche Höhe), ca. 15 dB unter den Aufprall-Tönen. Im Bild steht „LEVEL 5“ |
 | Finale | weicher Knall, danach Stille |

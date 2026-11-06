@@ -402,7 +402,8 @@ function sliceFrom(buf, skipSec) {
 /* ---------------- ASMR-Modus: Geräusche statt Musik ---------------- */
 
 // Welche Figur welches Aufprall-Geräusch bekommt
-const ASMR_FOR_SKIN = { smiley: 'drop', cat: 'soft', egg: 'soft', neon: 'drop' };
+// Nutzer-Wahl 06.11.: Wassertropfen für alle Figuren
+const ASMR_FOR_SKIN = { smiley: 'drop', cat: 'drop', egg: 'drop', neon: 'drop' };
 const ASMR_KINDS = ['soft', 'drop', 'boing', 'plop', 'crack', 'glass', 'click', 'marble', 'pop', 'string'];
 // Gezupfter Faden: Länge -> Tonhöhe (lang = tief), auf eine Pentatonik gerastert, damit nichts schräg klingt
 const PENTA = [0, 3, 5, 7, 10];

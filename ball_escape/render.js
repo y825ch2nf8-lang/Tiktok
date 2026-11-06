@@ -72,7 +72,7 @@ function parseArgs(argv) {
     }
   }
   if (a.sound === 'asmr') a.music = 'asmr';
-  if (a.threads && a.music === 'asmr' && !a.asmr) a.asmr = 'soft'; // Faden-Video -> weicher, gedämpfter Faden-Thup
+  if (a.threads && a.music === 'asmr' && !a.asmr) a.asmr = 'drop'; // Nutzer-Wahl: Wassertropfen
   // Kurz (≈35 s) = mehr Leute schauen bis zum Ende -> mehr Likes & Push. Lang (≈67 s) erst ab 10K Followern
   // sinnvoll (Creator Rewards). Standard: Box kurz, Ringe lang.
   if (!a.length) a.length = a.scene === 'box' ? 'short' : 'long';
