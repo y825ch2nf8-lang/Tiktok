@@ -67,6 +67,11 @@ Länge oder welcher Hook besser läuft. Diese Erkenntnisse kommen in die Regeln 
   (`maxFirst`).
 - **Die erste Sekunde entscheidet:** v1 verlor die meisten Zuschauer bei 0:01 (Ø 13,9 s, 0,84 % ganz gesehen). Ab dem
   ersten Frame muss sich etwas bewegen oder aufbauen. Likes kamen bei 0:04, sobald etwas passierte.
+- **Wenige große Figuren statt 1.000 Punkte** (`--goal 100` → Figuren 80 px Radius, Lücke 48°). Grund: Racerys Top-Video
+  (3,3 Mio.) zeigt ~10 große Gesichter. `--skin faces` = 5 Gesichter mit Ausdruck (erschrocken, lachend, cool, wütend,
+  verliebt). Bei Figuren ist der Glow reduziert, damit Gesichter erkennbar bleiben.
+- **Wassertropfen-Melodie (`--asmr dropmelody --melody …`):** Tropfen spielen die Song-Noten. So bleibt es ASMR, und die
+  Leute können trotzdem den Song raten. Beide Top-Accounts setzen auf Song-Raten.
 - **Nahtloser Loop (`--loop seamless`):** keine Schlusstafel; nach der Explosion wächst die Arena in 1,3 s zurück, der
   letzte Frame ist identisch mit dem ersten. Zuschauer schauen ungewollt nochmal (Wunsch des Nutzers 06.11.).
 - **Dateigröße:** Standard jetzt crf 23 (≈ 20–25 MB statt 100 MB). 100-MB-Dateien ließen sich am Handy nicht laden.

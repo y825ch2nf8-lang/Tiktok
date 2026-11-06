@@ -124,6 +124,41 @@
       g.fillStyle = '#FF7A9A'; g.beginPath(); g.moveTo(m - 6, m + 16); g.lineTo(m + 6, m + 16); g.lineTo(m, m + 23); g.closePath(); g.fill();
       g.strokeStyle = variant % 4 === 3 ? '#ccc' : '#444'; g.lineWidth = 2;
       for (const sgn of [-1, 1]) for (const dy of [-4, 4]) { g.beginPath(); g.moveTo(m + sgn * 14, m + 22); g.lineTo(m + sgn * 46, m + 18 + dy * 2); g.stroke(); }
+    } else if (kind === 'faces') {
+      // Gesichter mit Ausdruck (eigene Zeichnung): erschrocken, lachend, cool, wütend, verliebt
+      const v = variant % 5;
+      const base = v === 3 ? ['#FFB0A0', '#FF6B4A', '#D9342B'] : ['#FFF59A', '#FFD60A', '#E59A00'];
+      const gr = g.createRadialGradient(m - 14, m - 18, 6, m, m, 58);
+      gr.addColorStop(0, base[0]); gr.addColorStop(0.55, base[1]); gr.addColorStop(1, base[2]);
+      g.fillStyle = gr; g.beginPath(); g.arc(m, m, 58, 0, TAU); g.fill();
+      const ink = '#2B1A00';
+      g.fillStyle = ink; g.strokeStyle = ink; g.lineCap = 'round';
+      if (v === 0) { // erschrocken
+        for (const dx of [-20, 20]) { g.fillStyle = '#fff'; g.beginPath(); g.arc(m + dx, m - 12, 13, 0, TAU); g.fill(); g.fillStyle = ink; g.beginPath(); g.arc(m + dx, m - 10, 6, 0, TAU); g.fill(); }
+        g.beginPath(); g.ellipse(m, m + 26, 11, 15, 0, 0, TAU); g.fill();
+      } else if (v === 1) { // lachend
+        g.lineWidth = 7;
+        for (const dx of [-20, 20]) { g.beginPath(); g.arc(m + dx, m - 8, 10, Math.PI * 1.1, Math.PI * 1.9); g.stroke(); }
+        g.beginPath(); g.arc(m, m + 6, 30, 0, Math.PI); g.closePath(); g.fill();
+        g.fillStyle = '#FF7A9A'; g.beginPath(); g.arc(m, m + 26, 12, 0, Math.PI); g.fill();
+      } else if (v === 2) { // cool mit Sonnenbrille
+        g.fillRect(m - 44, m - 22, 88, 8);
+        for (const dx of [-21, 21]) { g.beginPath(); g.ellipse(m + dx, m - 12, 18, 13, 0, 0, TAU); g.fill(); }
+        g.lineWidth = 7; g.beginPath(); g.arc(m + 6, m + 14, 22, 0.15 * Math.PI, 0.6 * Math.PI); g.stroke();
+      } else if (v === 3) { // wütend
+        g.lineWidth = 7;
+        g.beginPath(); g.moveTo(m - 34, m - 30); g.lineTo(m - 10, m - 18); g.stroke();
+        g.beginPath(); g.moveTo(m + 34, m - 30); g.lineTo(m + 10, m - 18); g.stroke();
+        for (const dx of [-20, 20]) { g.beginPath(); g.arc(m + dx, m - 6, 6, 0, TAU); g.fill(); }
+        g.beginPath(); g.arc(m, m + 38, 20, 1.15 * Math.PI, 1.85 * Math.PI); g.stroke();
+      } else { // verliebt
+        g.fillStyle = '#E8173A';
+        for (const dx of [-21, 21]) {
+          const x = m + dx, y = m - 12;
+          g.beginPath(); g.moveTo(x, y + 12); g.bezierCurveTo(x - 20, y - 2, x - 9, y - 16, x, y - 5); g.bezierCurveTo(x + 9, y - 16, x + 20, y - 2, x, y + 12); g.fill();
+        }
+        g.lineWidth = 7; g.beginPath(); g.arc(m, m + 6, 26, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
+      }
     } else if (kind === 'egg') {
       const gr = g.createRadialGradient(m - 14, m - 20, 4, m, m + 6, 60);
       gr.addColorStop(0, '#FFFDF5'); gr.addColorStop(0.6, '#F6E7C8'); gr.addColorStop(1, '#D9BF8C');
@@ -395,7 +430,7 @@
   }
 
   function drawSkinBall(b, br, vt) {
-    const spr = skinSprite(o.skin, b.id % 4);
+    const spr = skinSprite(o.skin, b.id % (o.skin === 'faces' ? 5 : 4));
     const s = br * 2.25;
     const spin = (((b.id * 7) % 9) - 4) * 0.35;
     const a = b.id * 1.7 + vt * spin;
@@ -506,9 +541,10 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.imageSmoothingQuality = 'high';
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = 0.9;
+    const soft = o.skin && o.skin !== 'neon'; // Figuren: weniger Glow, damit Gesichter erkennbar bleiben
+    ctx.globalAlpha = soft ? 0.4 : 0.9;
     ctx.drawImage(bloomQ, 0, 0, cv.width, cv.height);
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = soft ? 0.2 : 0.55;
     ctx.drawImage(bloomH, 0, 0, cv.width, cv.height);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
@@ -554,7 +590,7 @@
 
   function hookLines() {
     if (o.hook) return o.hook.split('|');
-    const q = o.scene === 'box' ? (o.music === 'asmr' ? T.qBoxAsmr(fmt(o.goal)) : T.qBox) : T.qRings(o.rings);
+    const q = o.scene === 'box' ? (o.music === 'asmr' && o.asmr !== 'dropmelody' ? T.qBoxAsmr(fmt(o.goal)) : T.qBox) : T.qRings(o.rings);
     return wrapLines(q, FONT_IT, 64, 900);
   }
 

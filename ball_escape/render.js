@@ -109,16 +109,19 @@ function captionFor(a, sum, mel) {
       : (en ? `Can the ball break ${a.rings} rings?` : `Kann der Ball ${a.rings} Ringe zerstören?`);
   if (a.music === 'asmr') {
     const goal = a.goal.toLocaleString(en ? 'en-US' : 'de-DE');
+    const melodyDrops = a.asmr === 'dropmelody';
     const q = a.hook ? a.hook.replace('|', ' ') : box
-      ? (en ? `Can it reach ${goal} balls?` : `Schafft er ${goal} Bälle?`)
+      ? melodyDrops
+        ? (en ? 'How fast can you guess the song?' : 'Wie schnell erkennst du den Song?')
+        : (en ? `Can it reach ${goal} balls?` : `Schafft er ${goal} Bälle?`)
       : hook;
     return {
       hook: q,
       caption: en ? `${q} 😳 Watch till the end 👀 Sound on 🔊` : `${q} 😳 Bis zum Ende schauen 👀 Ton an 🔊`,
       hashtags: ['#satisfyingvideos', '#bouncingball', '#asmr', '#physics'],
-      pinnedComment: en
-        ? `${balls} balls 🔥 Which sound next: pop, click or glass? 👇`
-        : `${balls} Bälle 🔥 Welches Geräusch als Nächstes: Plopp, Klick oder Glas? 👇`,
+      pinnedComment: melodyDrops
+        ? (en ? `It was "${mel.title}" 💧 Which song next? 👇` : `Es war „${mel.title}“ 💧 Welcher Song als Nächstes? 👇`)
+        : (en ? `${balls} balls 🔥 Which song or sound next? 👇` : `${balls} Bälle 🔥 Welches Geräusch als Nächstes? 💧👇`),
       answer: balls,
     };
   }
@@ -193,6 +196,9 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
   const pacing = a.length === 'short' ? { minFirst: 0.8, maxFirst: 3, maxGap: 6 } : {};
   if (a.skin) simOpts.skin = a.skin;
   if (a.threads) simOpts.threads = true;
+  if (a.goal <= 200) Object.assign(simOpts, { ballR: 80, ballRMin: 22 }); // wenige, große Figuren (Top-Video Racery: ~10 große Gesichter)
+  if (a.goal <= 200 && a.length === 'short') simOpts.boxGapDeg = 48;
+  if (a.asmr) simOpts.asmr = a.asmr;
   if (a.loop === 'seamless') Object.assign(simOpts, { loop: 'seamless', outroDur: 2.4, slowmoDur: 0.5 });
   if (a.watermark) simOpts.watermark = a.watermark;
   if (a.hook) simOpts.hook = a.hook;

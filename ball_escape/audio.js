@@ -404,7 +404,7 @@ function sliceFrom(buf, skipSec) {
 // Welche Figur welches Aufprall-Geräusch bekommt
 // Nutzer-Wahl 06.11.: Wassertropfen für alle Figuren
 const ASMR_FOR_SKIN = { smiley: 'drop', cat: 'drop', egg: 'drop', neon: 'drop' };
-const ASMR_KINDS = ['soft', 'drop', 'boing', 'plop', 'crack', 'glass', 'click', 'marble', 'pop', 'string'];
+const ASMR_KINDS = ['dropmelody', 'soft', 'drop', 'boing', 'plop', 'crack', 'glass', 'click', 'marble', 'pop', 'string'];
 // Gezupfter Faden: Länge -> Tonhöhe (lang = tief), auf eine Pentatonik gerastert, damit nichts schräg klingt
 const PENTA = [0, 3, 5, 7, 10];
 function stringFreq(len) {
@@ -448,6 +448,20 @@ function waterDrop(pitch, seed) {
     const f = f0 * (1 + 0.8 * (1 - Math.exp(-t / 0.012)));
     ph += (TAU * f) / SR;
     return Math.sin(ph) * Math.exp(-t / 0.035) * Math.min(1, t / 0.004);
+  });
+}
+/* Wassertropfen, der eine Melodie-Note spielt: Song raten + ASMR-Klang */
+function melodyDrop(midi, seed) {
+  const r = mulberry32(seed);
+  let m = midi || 72;
+  while (m > 84) m -= 12;
+  while (m < 64) m += 12;
+  const f0 = hz(m);
+  let ph = r() * TAU;
+  return synth(0.28, (t) => {
+    const f = f0 * (0.9 + 0.1 * (1 - Math.exp(-t / 0.01))); // kleines "Plink"-Glissando zum Zielton
+    ph += (TAU * f) / SR;
+    return (Math.sin(ph) + 0.15 * Math.sin(2 * ph)) * Math.exp(-t / 0.09) * Math.min(1, t / 0.003);
   });
 }
 /* Sanftes Level-up: zwei reine Sinustöne (Quinte), weicher Einsatz, kein Metall, immer gleiche Höhe */
@@ -585,6 +599,7 @@ function renderAsmr(events, durationSec, opts) {
       const seed = Math.floor(rng() * 1e9);
       const h = kind === 'soft' ? softThup(softFreq(e.len || 400), seed)
         : kind === 'drop' ? waterDrop(pitch, seed)
+        : kind === 'dropmelody' ? melodyDrop(e.midi, seed)
         : kind === 'string' ? stringPluck(stringFreq(e.len || 400), seed)
         : asmrHit(kind, pitch, rng);
       dry.add(e.vt, h, g, panOf(e.x));
