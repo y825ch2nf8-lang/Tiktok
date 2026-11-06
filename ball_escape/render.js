@@ -11,6 +11,7 @@
  *   node ball_escape/render.js --music bounce          # ohne Song-Aufbau, nur Aufprall-Noten
  *   node ball_escape/render.js --scene box --sound asmr # Geräusche statt Musik (passend zur Figur)
  *   node ball_escape/render.js --scene box --sound asmr --threads --skin cat  # Fäden + gezupfter Faden
+ *   node ball_escape/render.js --scene layers --sound asmr --reveal meinmeme.mp4  # Meme-Ende
  *   node ball_escape/render.js --serve               # Live-Vorschau im Browser (http://localhost:8080)
  */
 'use strict';
@@ -53,6 +54,8 @@ function parseArgs(argv) {
     length: null,
     threads: false,
     loop: null,
+    reveal: null,
+    revealSec: null,
     asmr: null,
   };
   for (let i = 2; i < argv.length; i++) {
@@ -67,7 +70,8 @@ function parseArgs(argv) {
         a[k] = Number(next()); break;
       case 'seed-start': a.seedStart = Number(next()); break;
       case 'seed': { const v = next(); a.seed = v === 'auto' ? 'auto' : Number(v); break; }
-      case 'mode': case 'melody': case 'out': case 'hook': case 'music': case 'scene': case 'skin': case 'lang': case 'watermark': case 'sound': case 'asmr': case 'length': case 'loop': a[k] = next(); break;
+      case 'mode': case 'melody': case 'out': case 'hook': case 'music': case 'scene': case 'skin': case 'lang': case 'watermark': case 'sound': case 'asmr': case 'length': case 'loop': case 'reveal': a[k] = next(); break;
+      case 'reveal-sec': a.revealSec = Number(next()); break;
       case 'goal': a.goal = Number(next()); break;
       default: throw new Error('Unbekannte Option: ' + argv[i] + ' (siehe --help)');
     }
@@ -159,10 +163,47 @@ function captionFor(a, sum, mel) {
   };
 }
 
+function probe(file) {
+  const { execFileSync } = require('child_process');
+  const out = execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type', '-of', 'json', file]).toString();
+  const j = JSON.parse(out);
+  return { duration: parseFloat(j.format.duration) || 0, hasAudio: (j.streams || []).some((st) => st.codec_type === 'audio') };
+}
+
+/** Schneidet das Video beim Finale ab und hängt das Meme (Bild oder Clip) im Vollbild an. */
+async function makeReveal(mainPath, revealPath, outPath, cutAt, revealSec, fps) {
+  if (!fs.existsSync(revealPath)) throw new Error('Meme-Datei nicht gefunden: ' + revealPath);
+  const isImage = /\.(png|jpe?g|webp|bmp)$/i.test(revealPath);
+  const info = isImage ? { duration: 0, hasAudio: false } : probe(revealPath);
+  const dur = revealSec || (isImage ? 3 : Math.min(info.duration, 8));
+  const inputs = ['-i', mainPath];
+  if (isImage) inputs.push('-loop', '1', '-t', String(dur), '-i', revealPath);
+  else inputs.push('-t', String(dur), '-i', revealPath);
+  if (!info.hasAudio) inputs.push('-f', 'lavfi', '-t', String(dur), '-i', 'anullsrc=r=48000:cl=stereo');
+  const ra = info.hasAudio ? '[1:a]' : '[2:a]';
+  // Vordergrund eingepasst, Hintergrund = unscharfe Vergrößerung (kein Schwarz), Bild zoomt leicht rein
+  const filter = [
+    `[0:v]trim=0:${cutAt},setpts=PTS-STARTPTS,fps=${fps},format=yuv420p,setsar=1[a]`,
+    `[0:a]atrim=0:${cutAt},asetpts=PTS-STARTPTS,aresample=48000[aa]`,
+    `[1:v]fps=${fps},split[r1][r2]`,
+    `[r1]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:2,eq=brightness=-0.12[bg]`,
+    `[r2]scale=1040:1700:force_original_aspect_ratio=decrease,scale='trunc(iw*(1+0.06*t/${dur})/2)*2':'trunc(ih*(1+0.06*t/${dur})/2)*2':eval=frame[fg]`,
+    `[bg][fg]overlay=(W-w)/2:(H-h)/2,format=yuv420p,setsar=1,trim=0:${dur},setpts=PTS-STARTPTS[b]`,
+    `${ra}atrim=0:${dur},asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=stereo[ba]`,
+    `[a][aa][b][ba]concat=n=2:v=1:a=1[v][o]`,
+  ].join(';');
+  const args = ['-y', '-loglevel', 'error', ...inputs, '-filter_complex', filter, '-map', '[v]', '-map', '[o]',
+    '-c:v', 'libx264', '-preset', 'medium', '-crf', '23', '-maxrate', '8M', '-bufsize', '16M', '-pix_fmt', 'yuv420p',
+    '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', outPath];
+  const ff = spawn('ffmpeg', args, { stdio: ['ignore', 'inherit', 'inherit'] });
+  const [code] = await once(ff, 'close');
+  if (code !== 0) throw new Error('Meme-Schnitt fehlgeschlagen (FFmpeg ' + code + ')');
+}
+
 async function main() {
   const a = parseArgs(process.argv);
   if (a.help) {
-    console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(2, 16).join('\n'));
+    console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(2, 17).join('\n'));
     return;
   }
   const server = await serve(a.port);
@@ -295,6 +336,13 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
     const expected = sum.breaks.filter((b) => b < dur);
     const same = rendered.length === expected.length && rendered.every((v, i) => Math.abs(v - expected[i]) < 1e-6);
     if (!same) console.warn('WARNUNG: Render weicht von der Simulation ab (Audio evtl. nicht synchron).');
+
+    // 4b) Meme-Ende: harter Schnitt auf ein eigenes Bild/Video, sobald das Finale erreicht ist
+    if (a.reveal && sum.finalSec) {
+      const revealOut = outPath.replace(/\.mp4$/, '_meme.mp4');
+      await makeReveal(outPath, path.resolve(a.reveal), revealOut, sum.finalSec + 0.15, a.revealSec, a.fps);
+      console.log(`Meme-Version: ${revealOut}`);
+    }
 
     // 5) Caption / Metadaten
     const cap = captionFor(a, sum, mel);

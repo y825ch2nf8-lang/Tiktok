@@ -81,6 +81,9 @@ Länge oder welcher Hook besser läuft. Diese Erkenntnisse kommen in die Regeln 
 - **Nahtloser Loop (`--loop seamless`):** keine Schlusstafel; nach der Explosion wächst die Arena in 1,3 s zurück, der
   letzte Frame ist identisch mit dem ersten. Zuschauer schauen ungewollt nochmal (Wunsch des Nutzers 06.11.).
 - **Dateigröße:** Standard jetzt crf 23 (≈ 20–25 MB statt 100 MB). 100-MB-Dateien ließen sich am Handy nicht laden.
+- **Meme-Ende (`--reveal datei`):** Beim Finale wird hart auf ein Bild oder einen Clip des Nutzers geschnitten
+  (Vollbild, unscharfer Hintergrund, leichter Zoom). Ausgabe: `…_meme.mp4`. Virale Sounds legt der Nutzer in TikTok oder
+  CapCut auf den Schnitt; ich baue keine fremden Sounds ein. Bestes Format dafür: `--scene layers` („Was ist ganz unten?“).
 - **ASMR-Standard = Wassertropfen (`drop`).** Der Nutzer hat am 06.11. aus 3 Hörproben (Thup, Wassertropfen, leise gezupft)
   den Wassertropfen gewählt.
 - **ASMR muss leise und weich sein.** Nutzer-Feedback 05.11.: Das Level-up-Ding (FM-Glocke, wurde immer höher) und das
