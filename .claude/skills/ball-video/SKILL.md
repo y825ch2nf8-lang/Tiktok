@@ -59,6 +59,11 @@ Länge oder welcher Hook besser läuft. Diese Erkenntnisse kommen in die Regeln 
 
 ## Gelernte Regeln (immer anwenden, mit Quelle erweitern)
 
+- **4 Test-Formate (06.11., nach Nutzer-Screenshots aus der „Für dich“-Seite):** `--scene dense` (500 Ringe in 1 Minute,
+  Vorbild 1,7K Likes), `layers` („Was ist ganz unten?“, 40K Likes), `battle` („Wer gewinnt?“, 296K Likes, eigene Teams
+  statt Marken-Logos), `press` (Hydraulische Presse, 62K Likes, eigene Auslegung). Code in `formats.js`. Ergebnisse
+  der Tests in konkurrenz.md eintragen, dann das beste Format zum Standard machen.
+
 - **Hook nie über y≈250 px.** In der TikTok-App liegt dort die Such-/Tab-Leiste. v1 war verdeckt.
   *(eigener Screenshot 05.11.: 1.973 Views, aber nur 0,6 % Likes)*
 - **Unter 10K Followern: kurz (`--length short`, ≈34 s, Standard bei Box).** Mehr Leute schauen bis zum Höhepunkt,

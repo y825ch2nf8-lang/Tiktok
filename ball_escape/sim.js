@@ -94,6 +94,15 @@
     },
   };
 
+  // Zusatz-Formate (formats.js): dense, layers, battle, press
+  let FORMATS = null;
+  try {
+    FORMATS = typeof module === 'object' && module.exports ? require('./formats.js') : typeof self !== 'undefined' ? self.BallFormats : null;
+  } catch (e) {
+    FORMATS = null;
+  }
+  if (FORMATS) Object.assign(SCENES, FORMATS.PRESETS);
+
   function resolve(opts) {
     const mode = (opts && opts.mode) || DEFAULTS.mode;
     const scene = (opts && opts.scene) || 'rings';
@@ -114,6 +123,7 @@
   class Sim {
     constructor(opts) {
       const o = (this.o = resolve(opts));
+      if (FORMATS && FORMATS.has(o.scene)) return FORMATS.create(o);
       this.rng = mulberry32((o.seed >>> 0) || 1);
       this.t = 0;
       this.dt = 1 / PHYSICS_HZ;
@@ -494,7 +504,7 @@
     summary() {
       const breaks = this.log.filter((e) => e.type === 'break').map((e) => +e.vt.toFixed(3));
       const stageEv = this.log.filter((e) => e.type === 'stage');
-      const stages = this.o.scene === 'box' ? stageEv.map((e) => +e.vt.toFixed(3)) : breaks;
+      const stages = this.o.scene !== 'rings' ? stageEv.map((e) => +e.vt.toFixed(3)) : breaks;
       return {
         scene: this.o.scene,
         stages,

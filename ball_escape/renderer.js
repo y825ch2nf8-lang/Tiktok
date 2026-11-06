@@ -223,6 +223,8 @@
     song = o.song && o.music !== 'bounce' && o.music !== 'asmr' && window.Melodies ? window.Melodies.compile(o.song) : null;
     songStart = -1;
     T = TEXT[o.lang] || TEXT.de;
+    FMT = window.BallFormats && window.BallFormats.has(o.scene) ? window.BallFormats : null;
+    fmtFx = { parts: [], floats: [], cam: null, flash: null };
     if (!o.skin) o.skin = 'smiley';
     const b0 = tl.sim.balls[0];
     initBall = { x: b0.x, y: b0.y, id: b0.id, born: 0 };
@@ -729,14 +731,17 @@
       const evs = tl.step();
       const vt = tl.frame / o.fps;
       for (const ev of evs) {
+        if (FMT) { FMT.onEvent(ev, fmtFx, tl.sim, o, rng); continue; }
         if (ev.type === 'break') spawnBreakFx(ev, vt);
         else if (ev.type === 'note') spawnNoteFx(ev);
         else if (ev.type === 'stage') spawnStageFx(ev, vt);
         else if (ev.type === 'escape' && tl.sim.inside < 150) spawnEscapeFx(ev, vt);
       }
       lastEvents = evs;
-      updateFx(tl.timeScale(tl.frame) / o.fps);
+      if (FMT) FMT.update(fmtFx, tl.timeScale(tl.frame) / o.fps);
+      else updateFx(tl.timeScale(tl.frame) / o.fps);
     }
+    if (FMT) return renderFormat(k);
     const vt = k / o.fps;
     const total = Number.isFinite(tl.totalFrames) ? tl.totalFrames : Infinity;
     const finalF = tl.finalFrame;
@@ -842,6 +847,55 @@
     if (o.capture) return cv.toDataURL('image/jpeg', o.jpegQuality || 0.95);
     return lastEvents;
   }
+
+  /* Zusatz-Formate (formats.js) */
+  let FMT = null;
+  let fmtFx = null;
+  function renderFormat(k) {
+    const vt = k / o.fps;
+    const sim = tl.sim;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    const bg = FMT.background(o);
+    ctx.fillStyle = bg || '#000';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    if (!bg) {
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      drawStars(vt);
+    }
+    let sx = 0;
+    let sy = 0;
+    const sh = fmtFx.shake;
+    if (sh && vt - sh.t0 < sh.dur) {
+      const p = 1 - (vt - sh.t0) / sh.dur;
+      sx = (rng() * 2 - 1) * sh.amp * p * p;
+      sy = (rng() * 2 - 1) * sh.amp * p * p;
+    }
+    ctx.setTransform(scale, 0, 0, scale, sx * scale, sy * scale);
+    FMT.draw(ctx, sim, vt, o, fmtFx, HELP);
+    if (!bg) bloom();
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    FMT.drawText(ctx, sim, vt, o, fmtFx, HELP);
+    if (fmtFx.flash != null && vt - fmtFx.flash < 0.06) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.globalAlpha = 1;
+    }
+    if (o.capture) return cv.toDataURL('image/jpeg', o.jpegQuality || 0.95);
+    return lastEvents;
+  }
+  const HELP = {
+    outlinedText: (...a) => outlinedText(...a),
+    skinSprite: (k, v) => skinSprite(k, v),
+    glowSprite: (h) => glowSprite(h),
+    fmt: (n) => fmt(n),
+    clamp,
+    ease,
+    get FONT_IT() { return FONT_IT; },
+  };
 
   function simulate(opts) {
     const t = new Timeline(opts);

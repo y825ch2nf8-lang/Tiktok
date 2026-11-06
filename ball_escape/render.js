@@ -76,6 +76,12 @@ function parseArgs(argv) {
   if (a.threads && a.music === 'asmr' && !a.asmr) a.asmr = 'drop'; // Nutzer-Wahl: Wassertropfen
   // Kurz (≈35 s) = mehr Leute schauen bis zum Ende -> mehr Likes & Push. Lang (≈67 s) erst ab 10K Followern
   // sinnvoll (Creator Rewards). Standard: Box kurz, Ringe lang.
+  const FORMAT_TARGET = { dense: 58, layers: 30, battle: 20, press: 30 };
+  if (FORMAT_TARGET[a.scene]) {
+    if (a.target == null) a.target = FORMAT_TARGET[a.scene];
+    if (a.sound === 'music') a.music = 'asmr';
+    a.length = 'format';
+  }
   if (!a.length) a.length = a.scene === 'box' ? 'short' : 'long';
   if (a.length === 'short' && a.scene !== 'box') throw new Error('--length short gibt es bisher nur mit --scene box.');
   if (a.target == null) a.target = a.length === 'short' ? 30 : a.mode === 'double' ? 25 : 60;
@@ -98,8 +104,19 @@ function serve(port) {
   return new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server)));
 }
 
+const FORMAT_CAPTIONS = {
+  dense: { de: ['Schafft der Ball 500 Ringe in 1 Minute? 😳 Bis zum Ende schauen 👀', 'Hättest du gedacht, dass er es schafft? 👇'], en: ['Can the ball break 500 rings in 1 minute? 😳 Watch till the end 👀', 'Did you think it would make it? 👇'] },
+  layers: { de: ['Was ist ganz unten? 👀 Bis zum Ende schauen!', 'Hättest du das erwartet? 🐱👇'], en: ['What is at the bottom? 👀 Watch till the end!', 'Did you expect that? 🐱👇'] },
+  battle: { de: ['Wer gewinnt? 🔴🔵🟢🟡 Tipp vorher in die Kommentare!', 'Wer hat richtig getippt? Runde 2 kommt 👇'], en: ['Who wins? 🔴🔵🟢🟡 Guess in the comments first!', 'Who guessed right? Round 2 is coming 👇'] },
+  press: { de: ['Hydraulische Presse: schafft sie 500 Bälle? 😳 Warte aufs Ende!', 'Was soll ich als Nächstes in die Presse tun? 👇'], en: ['Hydraulic press: can it reach 500 balls? 😳 Wait for the ending!', 'What should I put in the press next? 👇'] },
+};
+
 function captionFor(a, sum, mel) {
   const en = a.lang === 'en';
+  if (FORMAT_CAPTIONS[a.scene]) {
+    const [cap, pin] = FORMAT_CAPTIONS[a.scene][en ? 'en' : 'de'];
+    return { hook: cap, caption: cap, hashtags: ['#satisfyingvideos', '#bouncingball', '#asmr', '#physics'], pinnedComment: pin, answer: '' };
+  }
   const balls = sum.finalBalls.toLocaleString(en ? 'en-US' : 'de-DE');
   const box = a.scene === 'box';
   const hook = a.hook
@@ -193,7 +210,7 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
     goal: a.goal,
   };
   if (a.length === 'short') Object.assign(simOpts, { boxGapDeg: 70, startSpeed: 900, outroDur: 4.5 });
-  const pacing = a.length === 'short' ? { minFirst: 0.8, maxFirst: 3, maxGap: 6 } : {};
+  const pacing = a.length === 'short' ? { minFirst: 0.8, maxFirst: 3, maxGap: 6 } : a.length === 'format' ? { minFirst: 0.2, maxFirst: 12, maxGap: 30 } : {};
   if (a.skin) simOpts.skin = a.skin;
   if (a.threads) simOpts.threads = true;
   if (a.goal <= 200) Object.assign(simOpts, { ballR: 80, ballRMin: 22 }); // wenige, große Figuren (Top-Video Racery: ~10 große Gesichter)
@@ -241,7 +258,7 @@ async function renderOne(browser, base, a, melodyName, seedStart) {
     // 3) Frames -> FFmpeg
     const date = new Date().toISOString().slice(0, 10);
     const soundTag = (a.loop === 'seamless' ? 'loop_' : '') + (a.threads ? 'faden_' : '') + (a.music === 'asmr' ? 'asmr-' + (a.asmr || audio.ASMR_FOR_SKIN[simOpts.skin || 'smiley']) : melodyName);
-    const name = `${date}_ball-escape_${a.scene === 'box' ? 'box' + a.goal : a.rings + 'ringe'}_${simOpts.skin || 'smiley'}_${soundTag}_${a.lang}_seed${seed}${a.draft ? '_draft' : ''}`;
+    const name = `${date}_ball-escape_${a.scene === 'box' ? 'box' + a.goal : a.scene === 'rings' ? a.rings + 'ringe' : a.scene}_${simOpts.skin || 'smiley'}_${soundTag}_${a.lang}_seed${seed}${a.draft ? '_draft' : ''}`;
     const outPath = path.resolve((a.out && a.melody.indexOf(',') < 0 && a.out) || path.join(ROOT, 'output', 'finished', name + '.mp4'));
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     const ff = spawn('ffmpeg', [
