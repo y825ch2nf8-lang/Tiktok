@@ -40,6 +40,8 @@
     dense: { denseN: 500, denseInner: 110, denseOuter: 470, denseGapDeg: 0, denseOmega: 0.55, gravity: 1100, ballR: 12, startSpeed: 1100, minBounce: 950, breakPerSpeed: 1100, timeLimit: 60, outroDur: 4, cy: 950 },
     layers: { layerN: 240, layerGap: 7, layerTop: 760, boxL: 110, boxRight: 930, gravity: 1800, ballR: 18, startSpeed: 420, bounceMin: 950, breakPerSpeed: 120, outroDur: 4.5 },
     battle: { teams: 4, ballR: 58, startSpeed: 640, gravity: 0, hp: 100, arenaR: 430, outroDur: 4.5, cy: 980 },
+    power: { gravity: 2600, ballR: 16, outroDur: 3.5, blockTop: 980, blockBottom: 1560, boxL: 150, boxRight: 930, bounceTop: 560, cy: 1100 },
+    tunnel: { tunnelN: 1000, tunnelR0: 140, tunnelStep: 6, tunnelBins: 360, tunnelSpeed: 9, tunnelDepth: [20, 50], tunnelWidth: [18, 22], tunnelClear: 0.65, outroDur: 3.5, cy: 920 },
     press: { goal: 500, arenaR: 430, ballR: 18, ballRMin: 7, startSpeed: 650, gravity: 250, pressOpen: 300, pressH: 420, pressPeriod: 1.2, outroDur: 4, cy: 1000 },
   };
 
@@ -480,7 +482,138 @@
     }
   }
 
-  const CLASSES = { dense: Dense, layers: Layers, battle: Battle, press: Press };
+  /* ---------------- 5) Jeder Treffer ×2 Kraft ---------------- */
+  const POWER_BLOCKS = [6, 20, 70, 250, 900, 3500, 14000];
+  class Power extends Base {
+    constructor(o) {
+      super(o);
+      this.power = 1;
+      this.block = 0;
+      this.rem = POWER_BLOCKS[0];
+      this.ball((o.boxL + o.boxRight) / 2, o.bounceTop, (this.rng() < 0.5 ? -1 : 1) * (220 + this.rng() * 160), 0);
+    }
+    surface() {
+      const o = this.o;
+      const size = POWER_BLOCKS[this.block];
+      return o.blockTop + (1 - this.rem / size) * (o.blockBottom - o.blockTop);
+    }
+    substep() {
+      const o = this.o;
+      this.t += this.dt;
+      const b = this.balls[0];
+      if (this.done) return;
+      b.vy += o.gravity * this.dt;
+      b.x += b.vx * this.dt;
+      b.y += b.vy * this.dt;
+      if (b.x - this.br < o.boxL) { b.x = o.boxL + this.br; b.vx = Math.abs(b.vx); }
+      if (b.x + this.br > o.boxRight) { b.x = o.boxRight - this.br; b.vx = -Math.abs(b.vx); }
+      const sy = this.surface();
+      if (b.y + this.br >= sy && b.vy > 0) {
+        b.y = sy - this.br;
+        const hit = Math.min(this.power, this.rem);
+        this.rem -= hit;
+        this.events.push({ type: 'powerhit', t: this.t, x: b.x, y: sy, n: hit, power: this.power, block: this.block });
+        this.note(b, b.vy, 300);
+        this.power *= 2;
+        // immer gleiche Sprunghöhe -> gleichmäßiger Rhythmus
+        b.vy = -Math.sqrt(2 * o.gravity * Math.max(120, sy - o.bounceTop));
+        b.vx += (this.rng() - 0.5) * 160;
+        if (this.rem <= 0) {
+          this.events.push({ type: 'stage', t: this.t, k: this.block, balls: this.power, final: false });
+          this.block++;
+          if (this.block >= POWER_BLOCKS.length) { this.inside = this.power / 2; this.finish({ power: this.power / 2 }); return; }
+          this.rem = POWER_BLOCKS[this.block];
+          this.events.push({ type: 'newblock', t: this.t, block: this.block });
+        }
+      }
+      this.inside = this.power;
+    }
+  }
+
+  /* ---------------- 6) Ring-Tunnel: entkommt er jemals? ---------------- */
+  class Tunnel extends Base {
+    constructor(o) {
+      super(o);
+      this.n = o.tunnelN;
+      this.B = o.tunnelBins;
+      this.alive = new Uint8Array(this.n * this.B).fill(1);
+      this.count = new Int16Array(this.n).fill(this.B);
+      this.passed = 0;
+      this.scaleBall();
+      const a = this.rng() * TAU;
+      this.ball(0, 0, Math.cos(a) * this.speed, Math.sin(a) * this.speed);
+    }
+    r(i) { return this.o.tunnelR0 + i * this.o.tunnelStep; }
+    scaleBall() {
+      const h = this.r(Math.min(this.passed, this.n - 1));
+      this.br = h * 0.035;
+      this.speed = h * this.o.tunnelSpeed;
+    }
+    carve(j, bin) {
+      // zackiger Zacken: breit an der Basis, spitz nach außen
+      const o = this.o;
+      const D = o.tunnelDepth[0] + Math.floor(this.rng() * o.tunnelDepth[1]);
+      const w0 = o.tunnelWidth[0] + this.rng() * o.tunnelWidth[1];
+      for (let m = 0; m < D && j + m < this.n; m++) {
+        const ring = j + m;
+        const w = Math.round(w0 * Math.pow(1 - m / D, 1.5) + this.rng() * 2);
+        for (let q = -w; q <= w; q++) {
+          const idx = ring * this.B + ((bin + q + this.B * 4) % this.B);
+          if (this.alive[idx]) { this.alive[idx] = 0; this.count[ring]--; }
+        }
+        // halb zerstörte Ringe fallen ganz weg
+        if (this.count[ring] > 0 && this.count[ring] < this.B * o.tunnelClear) {
+          this.alive.fill(0, ring * this.B, (ring + 1) * this.B);
+          this.count[ring] = 0;
+        }
+      }
+      let grew = false;
+      while (this.passed < this.n && this.count[this.passed] === 0) { this.passed++; grew = true; }
+      if (grew) {
+        this.scaleBall();
+        const b = this.balls[0];
+        const sp = Math.hypot(b.vx, b.vy) || 1;
+        b.vx *= this.speed / sp; b.vy *= this.speed / sp;
+        this.inside = this.n - this.passed;
+        this.stageTo(this.passed, this.n);
+        if (this.passed >= this.n) this.finish({ balls: 0 });
+      }
+    }
+    substep() {
+      this.t += this.dt;
+      const b = this.balls[0];
+      b.x += b.vx * this.dt;
+      b.y += b.vy * this.dt;
+      if (this.done) return;
+      const d = Math.hypot(b.x, b.y) || 1e-9;
+      const ang = Math.atan2(b.y, b.x);
+      const bin = Math.floor(((((ang % TAU) + TAU) % TAU) / TAU) * this.B) % this.B;
+      for (let j = this.passed; j < this.n && this.r(j) < d + this.br; j++) {
+        if (!this.alive[j * this.B + bin]) continue;
+        const ux = b.x / d;
+        const uy = b.y / d;
+        const vn = b.vx * ux + b.vy * uy;
+        const rj = this.r(j);
+        b.x = ux * Math.min(d, rj - this.br);
+        b.y = uy * Math.min(d, rj - this.br);
+        if (vn > 0) {
+          b.vx -= 2 * vn * ux; b.vy -= 2 * vn * uy;
+          const tw = (this.rng() - 0.5) * 0.6;
+          const c = Math.cos(tw);
+          const s2 = Math.sin(tw);
+          const vx = b.vx;
+          b.vx = vx * c - b.vy * s2; b.vy = vx * s2 + b.vy * c;
+          this.events.push({ type: 'tunnelhit', t: this.t, x: b.x, y: b.y, j });
+          this.note(b, this.speed, 300);
+          this.carve(j, bin);
+        }
+        break;
+      }
+      this.inside = this.n - this.passed;
+    }
+  }
+
+  const CLASSES = { dense: Dense, layers: Layers, battle: Battle, press: Press, power: Power, tunnel: Tunnel };
 
   /* ================= Zeichnen (Browser) ================= */
 
@@ -498,6 +631,16 @@
     } else if (ev.type === 'hit') {
       fx.floats.push({ x: ev.x, y: ev.y, text: `-${Math.max(ev.da, ev.dc)}`, t0: ev.t, col: '#fff' });
       for (let k = 0; k < 14; k++) { const a = rng() * TAU; fx.parts.push({ x: ev.x, y: ev.y, vx: Math.cos(a) * 300 * rng(), vy: Math.sin(a) * 300 * rng(), life: 0, max: 0.4, col: '#fff', s: 2 }); }
+    } else if (ev.type === 'powerhit') {
+      const n = Math.min(60, 8 + Math.round(Math.log2(ev.n + 1) * 7));
+      for (let k = 0; k < n; k++) fx.parts.push({ x: ev.x + (rng() - 0.5) * 160, y: ev.y, vx: (rng() - 0.5) * 700, vy: -150 - rng() * 900, life: 0, max: 0.6 + rng() * 0.6, col: rng() < 0.5 ? '#FF2E63' : '#FF7A9C', s: 3 + rng() * 4 });
+      fx.floats.push({ x: ev.x, y: ev.y - 40, text: `-${ev.n}`, t0: ev.t, col: '#fff' });
+      fx.shake = { t0: ev.t, amp: Math.min(18, 3 + Math.log2(ev.n + 1) * 1.4), dur: 0.18 };
+    } else if (ev.type === 'newblock') {
+      fx.newBlock = ev.t;
+      fx.shake = { t0: ev.t, amp: 14, dur: 0.3 };
+    } else if (ev.type === 'tunnelhit') {
+      for (let k = 0; k < 8; k++) { const a = rng() * TAU; fx.parts.push({ x: ev.x, y: ev.y, vx: Math.cos(a) * 140, vy: Math.sin(a) * 140, life: 0, max: 0.5, col: '#E9E3FF', s: 2, world: true }); }
     } else if (ev.type === 'powerup') {
       const L = { x2: { de: '×2 BALL!', en: '×2 BALL!' }, big: { de: 'GRÖSSER!', en: 'BIGGER!' }, fast: { de: 'SCHNELLER!', en: 'FASTER!' } };
       const col = { x2: '#FF2D95', big: '#34C759', fast: '#FFD60A' }[ev.kind];
@@ -621,6 +764,80 @@
         ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(b.x - w / 2, b.y - r - 22, w, 10);
         ctx.fillStyle = c; ctx.fillRect(b.x - w / 2, b.y - r - 22, (w * b.hp) / o.hp, 10);
       }
+    } else if (o.scene === 'power') {
+      const sy = sim.surface();
+      const size = POWER_BLOCKS[Math.min(sim.block, POWER_BLOCKS.length - 1)];
+      const slide = fx.newBlock != null ? H.ease((vt - fx.newBlock) / 0.35) : 1;
+      const off = (1 - slide) * 700;
+      // Rahmen
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(o.boxL - 8, o.blockTop - 420); ctx.lineTo(o.boxL - 8, o.blockBottom + 6); ctx.lineTo(o.boxRight + 8, o.blockBottom + 6); ctx.lineTo(o.boxRight + 8, o.blockTop - 420); ctx.stroke();
+      if (!sim.done) {
+        // Streifen: je größer der Block, desto dichter (Moiré wie im Original)
+        const h = o.blockBottom - o.blockTop;
+        const period = Math.max(3, h / size);
+        ctx.fillStyle = '#2A0F2E';
+        ctx.fillRect(o.boxL, sy + off, o.boxRight - o.boxL, o.blockBottom - sy);
+        ctx.fillStyle = '#FF2E63';
+        for (let y = o.blockBottom - period; y >= sy - 0.5; y -= period) ctx.fillRect(o.boxL, y + off, o.boxRight - o.boxL, Math.max(1.2, period * 0.55));
+        ctx.globalAlpha = 0.85;
+        H.outlinedText(H.fmt(sim.rem), (o.boxL + o.boxRight) / 2, Math.min(o.blockBottom - 30, sy + 80) + off, H.FONT_IT, 44, 400, '#fff', 8);
+        ctx.globalAlpha = 1;
+      }
+      drawTrailBall(ctx, sim, fx, '#ffffff', 0);
+      const b = sim.balls[0];
+      H.outlinedText(H.fmt(sim.done ? sim.power / 2 : sim.power), b.x, b.y - 40, H.FONT_IT, 46, 400, '#fff', 8);
+    } else if (o.scene === 'tunnel') {
+      const b = sim.balls[0];
+      const hole = sim.r(Math.min(sim.passed, sim.n - 1));
+      const zt = 300 / hole;
+      fx.zoom = fx.zoom == null ? zt : fx.zoom + (zt - fx.zoom) * 0.15;
+      const z = fx.zoom;
+      const cx = 540 - b.x * z * 0.25;
+      const cy = o.cy - b.y * z * 0.25;
+      const step = Math.max(1, Math.ceil(4.5 / (o.tunnelStep * z))); // sichtbare feine Linien statt Farbfläche
+      const maxR = 1700 / z;
+      const B = sim.B;
+      const HUES = [265, 330, 48, 95, 170, 215];
+      ctx.lineWidth = 1.3;
+      for (let i = sim.passed; i < sim.n && sim.r(i) < maxR; i += step) {
+        const R = sim.r(i) * z;
+        const sec = Math.floor((i / sim.n) * HUES.length);
+        ctx.strokeStyle = `hsl(${HUES[sec]},70%,${i % (2 * step) ? 62 : 74}%)`;
+        ctx.beginPath();
+        const base = i * B;
+        let k = 0;
+        // zusammenhängende, intakte Bogenstücke zeichnen
+        while (k < B) {
+          if (!sim.alive[base + k]) { k++; continue; }
+          let e = k;
+          while (e < B && sim.alive[base + e]) e++;
+          const a0 = (k / B) * TAU;
+          const a1 = (e / B) * TAU;
+          ctx.moveTo(cx + Math.cos(a0) * R, cy + Math.sin(a0) * R);
+          ctx.arc(cx, cy, R, a0, a1);
+          k = e;
+        }
+        ctx.stroke();
+      }
+      H.outlinedText(H.fmt(sim.n - sim.passed), cx, cy + 18, H.FONT_IT, 52, 400, 'rgba(255,255,255,0.75)', 0);
+      // Ball mit Schweif (Bildschirmkoordinaten)
+      fx.trail = fx.trail || [];
+      fx.trail.unshift(cx + b.x * z, cy + b.y * z);
+      if (fx.trail.length > 40) fx.trail.length = 40;
+      ctx.strokeStyle = '#8B7BFF'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let k = 0; k < fx.trail.length; k += 2) (k ? ctx.lineTo : ctx.moveTo).call(ctx, fx.trail[k], fx.trail[k + 1]);
+      ctx.stroke();
+      ctx.fillStyle = '#FFE14D';
+      ctx.beginPath(); ctx.arc(cx + b.x * z, cy + b.y * z, Math.max(6, sim.br * z), 0, TAU); ctx.fill();
+      for (const p of fx.parts) {
+        if (!p.world) continue;
+        ctx.globalAlpha = 1 - p.life / p.max; ctx.fillStyle = p.col;
+        ctx.fillRect(cx + p.x * z - 1, cy + p.y * z - 1, 3, 3);
+      }
+      ctx.globalAlpha = 1;
+      return;
     } else if (o.scene === 'press') {
       const w = sim.w;
       const H2 = o.pressH / 2;
@@ -706,12 +923,16 @@
       layers: ['WAS IST GANZ UNTEN?'], layersEnd: 'EINE KATZE!',
       battle: ['WER GEWINNT?'], round: 'RUNDE 1', wins: (n) => `${n} GEWINNT!`,
       press: ['HYDRAULISCHE PRESSE'], balls: 'BÄLLE', wait: 'Warte aufs Ende!', pressEnd: (n) => `${n} BÄLLE!`,
+      power: 'JEDER TREFFER = ×2 KRAFT', powerEnd: 'ALLES ZERSTÖRT!',
+      tunnel: ['ENTKOMMT ER JEMALS?'], tunnelEnd: 'ENDLICH FREI!',
     },
     en: {
       dense: (n) => [`CAN THE BALL BREAK ${n} RINGS`, 'IN 1 MINUTE?'], rings: 'RINGS', done: 'DONE!', timeUp: "TIME'S UP!",
       layers: ['WHAT IS AT THE BOTTOM?'], layersEnd: 'A CAT!',
       battle: ['WHO WINS?'], round: 'ROUND 1', wins: (n) => `${n} WINS!`,
       press: ['HYDRAULIC PRESS'], balls: 'BALLS', wait: 'Wait for the ending!', pressEnd: (n) => `${n} BALLS!`,
+      power: 'EACH HIT ×2 THE POWER', powerEnd: 'EVERYTHING DESTROYED!',
+      tunnel: ['WILL IT EVER ESCAPE?'], tunnelEnd: 'FINALLY FREE!',
     },
   };
 
@@ -752,6 +973,10 @@
         ctx.fillText(`${TEAMS[k].name[lang]} ${b.hp}`, x, y + 10);
         ctx.globalAlpha = 1;
       }
+    } else if (o.scene === 'power') {
+      H.outlinedText(L.power, 540, top, H.FONT_IT, 62, 920, '#FF4F7B', 10);
+    } else if (o.scene === 'tunnel') {
+      L.tunnel.forEach((ln, i) => H.outlinedText(ln, 540, top + i * 70, H.FONT_IT, 62, 920, '#fff', 10));
     } else if (o.scene === 'press') {
       H.outlinedText(L.press[0], 540, top - 10, H.FONT_IT, 66, 920, '#fff', 10);
       H.outlinedText(`${H.fmt(sim.done ? o.goal : sim.inside)} / ${H.fmt(o.goal)} ${L.balls}`, 540, top + 80, H.FONT_IT, 62, 900, '#fff', 10);
@@ -778,6 +1003,8 @@
         if (o.scene === 'dense') { big = last.success ? L.done : L.timeUp; small = last.success ? `${last.time.toFixed(1).replace('.', lang === 'de' ? ',' : '.')} s` : `${sim.broken} / ${o.denseN}`; }
         else if (o.scene === 'layers') { big = L.layersEnd; }
         else if (o.scene === 'battle') { const w = TEAMS[last.winner || 0]; big = L.wins(w.name[lang]); col = w.color; }
+        else if (o.scene === 'power') { big = L.powerEnd; small = `${H.fmt(last.power || 0)}×`; col = '#FF4F7B'; }
+        else if (o.scene === 'tunnel') { big = L.tunnelEnd; }
         else { big = L.pressEnd(H.fmt(o.goal)); }
         const y = o.scene === 'layers' ? 760 : o.cy;
         H.outlinedText(big, 540, y, H.FONT_IT, 120, 960, col, 16);

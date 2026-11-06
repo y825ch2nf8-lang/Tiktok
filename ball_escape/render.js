@@ -80,7 +80,7 @@ function parseArgs(argv) {
   if (a.threads && a.music === 'asmr' && !a.asmr) a.asmr = 'drop'; // Nutzer-Wahl: Wassertropfen
   // Kurz (≈35 s) = mehr Leute schauen bis zum Ende -> mehr Likes & Push. Lang (≈67 s) erst ab 10K Followern
   // sinnvoll (Creator Rewards). Standard: Box kurz, Ringe lang.
-  const FORMAT_TARGET = { dense: 58, layers: 30, battle: 20, press: 30 };
+  const FORMAT_TARGET = { dense: 58, layers: 30, battle: 20, press: 30, power: 19, tunnel: 30 };
   if (FORMAT_TARGET[a.scene]) {
     if (a.target == null) a.target = FORMAT_TARGET[a.scene];
     if (a.sound === 'music') a.music = 'asmr';
@@ -112,6 +112,8 @@ const FORMAT_CAPTIONS = {
   dense: { de: ['Schafft der Ball 500 Ringe in 1 Minute? 😳 Bis zum Ende schauen 👀', 'Hättest du gedacht, dass er es schafft? 👇'], en: ['Can the ball break 500 rings in 1 minute? 😳 Watch till the end 👀', 'Did you think it would make it? 👇'] },
   layers: { de: ['Was ist ganz unten? 👀 Bis zum Ende schauen!', 'Hättest du das erwartet? 🐱👇'], en: ['What is at the bottom? 👀 Watch till the end!', 'Did you expect that? 🐱👇'] },
   battle: { de: ['Wer gewinnt? 🔴🔵🟢🟡 Tipp vorher in die Kommentare!', 'Wer hat richtig getippt? Runde 2 kommt 👇'], en: ['Who wins? 🔴🔵🟢🟡 Guess in the comments first!', 'Who guessed right? Round 2 is coming 👇'] },
+  power: { de: ['Jeder Treffer verdoppelt die Kraft 💥 Bis zum Ende schauen 👀', 'Bei welchem Block hast du gedacht, jetzt ist Schluss? 👇'], en: ['Each hit doubles the power 💥 Watch till the end 👀', 'Which block did you think would stop it? 👇'] },
+  tunnel: { de: ['Es ist so nervig, wenn der Ball nicht entkommt 😤', 'Bei welcher Zahl hättest du aufgegeben? 👇'], en: ["It's so annoying when the ball won't escape 😤", 'At which number would you have given up? 👇'] },
   press: { de: ['Hydraulische Presse: schafft sie 500 Bälle? 😳 Warte aufs Ende!', 'Was soll ich als Nächstes in die Presse tun? 👇'], en: ['Hydraulic press: can it reach 500 balls? 😳 Wait for the ending!', 'What should I put in the press next? 👇'] },
 };
 

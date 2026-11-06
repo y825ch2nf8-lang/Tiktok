@@ -61,7 +61,8 @@ Länge oder welcher Hook besser läuft. Diese Erkenntnisse kommen in die Regeln 
 
 - **4 Test-Formate (06.11., nach Nutzer-Screenshots aus der „Für dich“-Seite):** `--scene dense` (500 Ringe in 1 Minute,
   Vorbild 1,7K Likes), `layers` („Was ist ganz unten?“, 40K Likes), `battle` („Wer gewinnt?“, 296K Likes, eigene Teams
-  statt Marken-Logos), `press` (Hydraulische Presse, 62K Likes, eigene Auslegung). Code in `formats.js`. Das 500-Ringe-Video hat Power-ups (×2 = zweiter Ball, XL = größer, » = schneller und doppelt
+  statt Marken-Logos), `press` (Hydraulische Presse, 62K Likes, eigene Auslegung). Code in `formats.js`. Dazu (Nutzer-Vorlagen 06.11.): `power` („Jeder Treffer = ×2 Kraft“, Vorbild Cool Balls) und
+  `tunnel` („Entkommt er jemals?“, Vorbild Spandrel 139K Likes: 1.000 Ringe, Zacken, Loch wächst, Kamera zoomt). Das 500-Ringe-Video hat Power-ups (×2 = zweiter Ball, XL = größer, » = schneller und doppelt
   so viele Ringe pro Aufprall). Sie erscheinen mit Abstand zum Ball, damit man mitfiebert, und die Seed-Suche nimmt nur knapp geschaffte Läufe. Ergebnisse
   der Tests in konkurrenz.md eintragen, dann das beste Format zum Standard machen.
 
