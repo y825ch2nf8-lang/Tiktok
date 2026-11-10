@@ -138,6 +138,14 @@ Fokuspunkte, die im Clamp-Bereich liegen, bewegen sich nicht. Einen Tilt also im
 **`score.json`:** `bpm, bars, loop, chords (MIDI), roots, drums[] pro Takt ("full"|"nokick"|"break"|"none"), melody{takt:[[beat,midi]]},
 sfx[{type: impact|riser|whoosh|swish|reverse|tick, t, dur?, g?}]`. `riser.t` = Ankunft, `whoosh.t` = Peak.
 
+**Serien aus einer Vorlage (`promo/ki_tipps/`, „KI im Alltag“):** Die Inhalte stehen in `topics.js`, `edit.js` liest
+`?topic=N`. Ablauf je Video (21,6 s, 100 BPM, Loop): Hook → Schritt 1 (Strichgrafik im Kamerasucher) → Schritt 2 (Prompt
+tippt sich auf Akzentfläche) → Schritt 3 (Ergebnisliste) → CTA. Neues Thema = neuer Eintrag in `topics.js` plus ggf. eine
+Grafik in `ART`. Rendern für TikTok in 1080p mit kleiner Datei:
+`node promo/engine/render.js promo/ki_tipps render reel --k=1 --crf=22 --q=topic=0 --name=ki_trick_01_fernseher`
+(`--q` hängt Query-Parameter an, `--name` setzt den Dateinamen, `EDIT.grain` regelt das Filmkorn).
+Ergebnisse der KI nur so versprechen, wie sie stimmen: Hinweiszeile (`note`) bei Recht, Preisen und Menünamen.
+
 ## 6. QA vor dem Abschicken
 
 - Kontaktbogen pro Szene ansehen: keine fremden Logos, Rahmen oder UI-Reste, kein Text in den Safe-Zone-Rändern, nichts abgeschnitten.

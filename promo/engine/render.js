@@ -7,18 +7,18 @@ const { chromium } = require('playwright');
 const { spawn, execFileSync } = require('child_process');
 const fs = require('fs'), path = require('path');
 
-const flags = Object.fromEntries(process.argv.slice(2).filter(a => a.startsWith('--')).map(a => a.slice(2).split('=')));
+const flags = Object.fromEntries(process.argv.slice(2).filter(a => a.startsWith('--')).map(a => { const i = a.indexOf('='); return i < 0 ? [a.slice(2), '1'] : [a.slice(2, i), a.slice(i + 1)]; }));
 const [dirArg, mode = 'preview', fmt = 'reel', times = ''] = process.argv.slice(2).filter(a => !a.startsWith('--'));
 const D = path.resolve(dirArg), feed = fmt === 'feed', VH = feed ? 1350 : 1920;
 const K = +(flags.k || (mode === 'render' ? 2 : 1)), tag = K === 2 ? '_4k' : K === 1 ? '' : `_x${K}`;
 const OUT = path.join(D, 'out'); fs.mkdirSync(OUT, { recursive: true });
-const name = path.basename(D);
+const name = flags.name || path.basename(D);   // --name=<output basename>, --q=<extra query, e.g. topic=3>, --crf=<n>
 
 (async () => {
   const b = await chromium.launch({ args: ['--allow-file-access-from-files', '--autoplay-policy=no-user-gesture-required'] });
   const p = await b.newPage({ viewport: { width: 1080, height: VH }, deviceScaleFactor: K });
   p.on('pageerror', e => { console.error('PAGE ERROR', e.message); process.exitCode = 1; });
-  await p.goto('file://' + D + '/index.html?k=' + K + (feed ? '&feed' : ''));
+  await p.goto('file://' + D + '/index.html?k=' + K + (feed ? '&feed' : '') + (flags.q ? '&' + flags.q : ''));
   await p.evaluate(() => window.ready);
   const shot = async t => { await p.evaluate(async t => { await prepare(t); render(t); }, t); return p.screenshot({ type: 'jpeg', quality: 95 }); };
 
@@ -36,11 +36,11 @@ const name = path.basename(D);
   } else {
     const fps = 30, dur = await p.evaluate(() => DUR), raw = path.join(OUT, `${name}_${fmt}${tag}_noaudio.mp4`);
     const rate = K > 1 ? ['-maxrate', '24M', '-bufsize', '48M', '-profile:v', 'high', '-level', '5.1'] : [];
-    const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', '' + fps, '-c:v', 'mjpeg', '-i', '-', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-preset', 'medium', ...rate, raw], { stdio: ['pipe', 'inherit', 'inherit'] });
+    const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', '' + fps, '-c:v', 'mjpeg', '-i', '-', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '' + (flags.crf || 18), '-preset', 'medium', ...rate, raw], { stdio: ['pipe', 'inherit', 'inherit'] });
     const n = Math.round(dur * fps);
     for (let i = 0; i < n; i++) { const buf = await shot(i / fps); if (!ff.stdin.write(buf)) await new Promise(r => ff.stdin.once('drain', r)); }
     ff.stdin.end(); await new Promise(r => ff.on('close', r));
-    const wav = path.join(D, 'music.wav');
+    const wav = path.join(D, flags.music || 'music.wav');
     if (fs.existsSync(wav)) {
       const fin = path.join(OUT, `${name}_${fmt}${tag}.mp4`);
       execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', raw, '-i', wav, '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', fin]);
