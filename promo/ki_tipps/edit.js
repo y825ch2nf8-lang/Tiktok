@@ -126,16 +126,47 @@ function art(cx, cy, k, l, c, a, bg) {
 }
 
 // ---------------- shots ----------------
-function hook(l, t) {
-  line(`KI IM ALLTAG  ·  TRICK ${NO}`, L, T0 + 40, F.label(24, ACC), 0, l, { instant: true });
-  const d = hh(t, .8);
-  art(W / 2 - 40 + d.dx, 660 + d.dy, 1.06 + l * .012, l, CREAM, ACC, INK);
-  const s0 = fit(TP.hook[0], v => F.sans(v), 150, TXW), s1 = fit(TP.hook[1], v => F.sans(v), 150, TXW), s2 = fit(TP.hook[2], v => F.serif(v), 205, TXW);
-  const y = 1105;
-  pop(TP.hook[0], L, y, F.sans(s0), l, { align: 'left', baseline: 'alphabetic' });
-  if (l >= BEAT) pop(TP.hook[1], L, y + 150, F.sans(s1), l - BEAT, { align: 'left', baseline: 'alphabetic' });
-  if (l >= 2 * BEAT) pop(TP.hook[2], L, y + 330, F.serif(s2, ACC), l - 2 * BEAT, { align: 'left', baseline: 'alphabetic' });
+function slam(str, X, Y, f, li, rot = 0, amp = .16) {              // word hits the frame: overshoot scale + tiny rotation, settles in ~0.2 s
+  const k = Math.exp(-li * 16), sc = 1 + amp * k, w = measure(str, f), cx = X + w / 2, cy = Y - f.size * .3;   // scales around its own centre so it never leaves the frame
+  x.save(); x.translate(cx, cy); x.rotate(rot * k); x.scale(sc, sc); setFont(f); x.textAlign = 'center'; x.textBaseline = 'alphabetic'; x.fillStyle = f.color; x.fillText(str, 0, f.size * .3); x.restore();
 }
+// Hook: one hard cut per beat. Beat 0 = full-bleed lime with a giant ink line (frame 0 already carries the message),
+// beat 1 = inverted, beat 2 = payoff line in serif, beat 3 = promise ("3 Schritte") + plate.
+function hook(l, t) {
+  const i = Math.min(3, Math.floor(l / BEAT)), li = l - i * BEAT, h = TP.hook;
+  const shake = Math.exp(-li * 11) * 16, push = 1 + .02 * li;
+  x.save(); x.translate(W / 2 + Math.sin(l * 97) * shake, H / 2 + Math.cos(l * 83) * shake); x.scale(push, push); x.translate(-W / 2, -H / 2);
+  const big = (str, serif) => fit(str, v => serif ? F.serif(v) : F.sans(v), serif ? 300 : 250, TXW);
+  if (i === 0) {
+    fill(LIME, -60, -60, W + 120, H + 120);
+    line(`KI IM ALLTAG  ·  TRICK ${NO}`, L, T0 + 40, F.label(24, K_INK), 0, l, { instant: true });
+    slam(h[0], L, 900, F.sans(big(h[0]), K_INK), li, -.03, .1);
+    fill(K_INK, L, 960, TXW * outExpo(cl(li / .35)), 10);
+    art(L + 300, 1262, .62, l, K_INK, PAPER, LIME);
+  } else {
+    line(`KI IM ALLTAG  ·  TRICK ${NO}`, L, T0 + 40, F.label(24, ACC), 0, l, { instant: true });
+    if (i === 1) {
+      x.save(); x.globalAlpha = .45; setFont(F.sans(fit(h[0], v => F.sans(v), 96, TXW))); x.fillStyle = CREAM; x.textAlign = 'left'; x.textBaseline = 'alphabetic'; x.fillText(h[0], L, 660); x.restore();
+      slam(h[1], L, 900, F.sans(big(h[1])), li, .03);
+      art(L + 300, 1262, .62, l, CREAM, ACC, INK);
+    } else {
+      const s0 = fit(h[0], v => F.sans(v), 110, TXW), s1 = fit(h[1], v => F.sans(v), 110, TXW);
+      setFont(F.sans(s0)); x.fillStyle = CREAM; x.textAlign = 'left'; x.textBaseline = 'alphabetic'; x.fillText(h[0], L, 520);
+      setFont(F.sans(s1)); x.fillText(h[1], L, 640);
+      const l2 = l - 2 * BEAT;
+      slam(h[2], L, 880, F.serif(big(h[2], true), ACC), l2, -.025);
+      if (i === 3) {
+        const p = outExpo(cl(li / .3)), txt_ = 'SO GEHT’S IN 3 SCHRITTEN', f = F.label(27, K_INK), tw = measure(txt_, f) + 56;
+        x.save(); x.beginPath(); x.rect(L, 960, tw * p, 76); x.clip(); fill(ACC, L, 960, tw, 76);
+        setFont(f); x.fillStyle = K_INK; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText(txt_, L + 28, 999); x.restore();
+      }
+      art(L + 300, 1262, .62, l, CREAM, ACC, INK);
+    }
+  }
+  x.restore();
+}
+// retention bar: thin progress line across the top of the safe area
+function bar(t, col) { fill(col, 0, 246, W * (t / at(36)), 7); }
 function corners(X, Y, w, h, len, col, lw) {
   x.save(); x.strokeStyle = col; x.lineWidth = lw; x.lineCap = 'square';
   for (const [cx, cy, sx, sy] of [[X, Y, 1, 1], [X + w, Y, -1, 1], [X, Y + h, 1, -1], [X + w, Y + h, -1, -1]]) { x.beginPath(); x.moveTo(cx + sx * len, cy); x.lineTo(cx, cy); x.lineTo(cx, cy + sy * len); x.stroke(); }
@@ -215,14 +246,16 @@ function cta(l, t) {
 window.EDIT = {
   dur: at(36), loop: true, accent: LIME, grain: .22, assets: {},
   shots: [
-    { a: 0, b: at(4), f: hook },
-    { a: at(4), b: at(10), f: step1 },
-    { a: at(10), b: at(20), f: step2 },
-    { a: at(20), b: at(30), f: step3 },
-    { a: at(30), b: at(36), f: cta },
+    { a: 0, b: at(4), f: (l, t) => { hook(l, t); bar(t, t < BEAT ? K_INK : LIME); } },
+    { a: at(4), b: at(10), f: (l, t) => { step1(l, t); bar(t, K_INK); } },
+    { a: at(10), b: at(20), f: (l, t) => { step2(l, t); bar(t, K_INK); } },
+    { a: at(20), b: at(30), f: (l, t) => { step3(l, t); bar(t, LIME); } },
+    { a: at(30), b: at(36), f: (l, t) => { cta(l, t); bar(t, LIME); } },
   ],
   fx: [
-    { type: 'flash', t: 0, a: .3 },
+    { type: 'flash', t: 0, a: .22 },
+    { type: 'flash', t: at(1), a: .3 },
+    { type: 'flash', t: at(2), a: .4 },
     { type: 'whip', t: at(10), w: .1 },
     { type: 'whip', t: at(20), w: .1, dir: -1 },
     { type: 'leak', t: at(30) },

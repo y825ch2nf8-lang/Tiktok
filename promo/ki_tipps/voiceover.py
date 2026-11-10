@@ -41,15 +41,24 @@ for n, txt in sorted(SCRIPTS.items()):
     segs = []; a = lead
     for s in cuts: segs.append((a, s[0] + 0.06)); a = s[1] - 0.04
     segs.append((a, tail + 0.08))
+    # optional re-recorded hook line (vo/NN_hook.mp3) replaces the first sentence; long ones are sped up slightly
+    hook = f'{D}/vo/{n}_hook.mp3'; hk = None
+    if os.path.exists(hook):
+        hl = run('ffmpeg', '-i', hook, '-af', 'silencedetect=noise=-35dB:d=0.1', '-f', 'null', '-').stderr
+        hs = [float(v) for v in re.findall(r'silence_start: ([\d.]+)', hl)]; he = [float(v) for v in re.findall(r'silence_end: ([\d.]+)', hl)]
+        ht = probe(hook); a0 = he[0] if hs and hs[0] < 0.05 else 0.0
+        b0 = hs[-1] + 0.08 if hs and (len(hs) > len(he) or he[-1] > ht - 0.05) and hs[-1] > a0 else ht
+        tempo = min(1.18, max(1.0, (b0 - a0) / 2.25)); hk = (a0, b0, tempo); segs[0] = (0, (b0 - a0) / tempo)
     pos = []; t = 0
     for (a, b), sc in zip(segs, SCENES): p = max(sc, t + 0.10); pos.append(p); t = p + (b - a)
     over = t - (DUR - 0.15)
     info = ' '.join(f'{p:.2f}+{b - a:.2f}' for p, (a, b) in zip(pos, segs))
     print(n, f'take {total:.2f}s  placed: {info}  end {t:.2f}' + ('  OVERRUN' if over > 0 else ''))
-    fc = ''.join(f'[1:a]atrim={a:.3f}:{b:.3f},asetpts=PTS-STARTPTS,afade=t=in:d=0.02,adelay={int(p * 1000)}:all=1[v{i}];' for i, ((a, b), p) in enumerate(zip(segs, pos)))
+    fc = ''.join(f'[1:a]atrim={a:.3f}:{b:.3f},asetpts=PTS-STARTPTS,afade=t=in:d=0.02,adelay={int(p * 1000)}:all=1[v{i}];' for i, ((a, b), p) in enumerate(zip(segs, pos)) if not (hk and i == 0))
+    if hk: fc += f'[2:a]atrim={hk[0]:.3f}:{hk[1]:.3f},asetpts=PTS-STARTPTS,atempo={hk[2]:.3f},adelay={int(pos[0] * 1000)}:all=1[v0];'
     fc += ''.join(f'[v{i}]' for i in range(5)) + 'amix=inputs=5:normalize=0,highpass=f=70,acompressor=threshold=-18dB:ratio=3:attack=5:release=120:makeup=4,apad=whole_dur=21.6,asplit[vo][sc];'
     fc += '[0:a]volume=0.55[m];[m][sc]sidechaincompress=threshold=0.02:ratio=8:attack=15:release=350[duck];'
     fc += '[duck][vo]amix=inputs=2:normalize=0,alimiter=limit=0.8:level=0[a]'
     out = f'{ROOT}/output/ki_tipps/' + os.path.basename(vid).replace('_reel.mp4', '_stimme.mp4')
-    r = run('ffmpeg', '-y', '-loglevel', 'error', '-i', vid, '-i', vo, '-filter_complex', fc, '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-t', str(DUR), '-movflags', '+faststart', out)
+    r = run('ffmpeg', '-y', '-loglevel', 'error', '-i', vid, '-i', vo, *(['-i', hook] if hk else []), '-filter_complex', fc, '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-t', str(DUR), '-movflags', '+faststart', out)
     if r.returncode: print(r.stderr); sys.exit(1)
