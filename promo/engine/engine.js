@@ -149,7 +149,7 @@ function render(t) {
     if (fx.type === 'leak') leak(rel(t, fx.t));
   }
   const v = m.createRadialGradient(W / 2, H / 2, H * .32, W / 2, H / 2, H * .78);
-  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.42)'); m.fillStyle = v; m.fillRect(0, 0, W, H);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, `rgba(0,0,0,${E.vignette ?? .42})`); m.fillStyle = v; m.fillRect(0, 0, W, H);
   m.save(); m.globalCompositeOperation = 'overlay'; m.globalAlpha = E.grain ?? .42; m.drawImage(grains[Math.round(t * 30) % 6], 0, 0, W, H); m.restore();
   if (!E.loop) { const fd = Math.max(1 - t / .15, 1 - (DUR - t) / .7, 0); if (fd > 0) { m.fillStyle = `rgba(0,0,0,${cl(fd)})`; m.fillRect(0, 0, W, H); } }
 }
