@@ -1,5 +1,6 @@
 // "KI im Alltag" — explainer template, 21.6 s = 9 bars @ 100 BPM, one video per entry in topics.js (?topic=0..9).
-// Hook (4 beats) -> Schritt 1: Material (6) -> Schritt 2: Prompt wird getippt (10) -> Schritt 3: Ergebnis (10) -> CTA (6).
+// Hook (4 beats) -> chat scene as a fake screen recording: photo message (6), prompt types itself (10), answer (10) -> CTA (6).
+// Spoken words run as pop captions over the chat (timings from vo_timing.js, written by voiceover.py).
 // Engine helpers (line, pop, rule, fill, F, S, L, T0, B0, W, H, x, ...) are globals from ../engine/engine.js
 // and may only be used inside functions (this file loads first).
 const BEAT = 60 / 100, at = b => b * BEAT;
@@ -167,65 +168,87 @@ function hook(l, t) {
 }
 // retention bar: thin progress line across the top of the safe area
 function bar(t, col) { fill(col, 0, 246, W * (t / at(36)), 7); }
-function corners(X, Y, w, h, len, col, lw) {
-  x.save(); x.strokeStyle = col; x.lineWidth = lw; x.lineCap = 'square';
-  for (const [cx, cy, sx, sy] of [[X, Y, 1, 1], [X + w, Y, -1, 1], [X, Y + h, 1, -1], [X + w, Y + h, -1, -1]]) { x.beginPath(); x.moveTo(cx + sx * len, cy); x.lineTo(cx, cy); x.lineTo(cx, cy + sy * len); x.stroke(); }
-  x.restore();
+// ---------------- chat scene: the three steps play as one "screen recording" of a chat with the AI ----------------
+const BUB = '#24211d', CH_TOP = 480, CH_BOT = 1235;
+function chip(str, li) {                                  // step label, slams in on the cut
+  const f = F.sans(fit(str, v => F.sans(v), 46, TXW - 60), K_INK), w = measure(str, f) + 56, k = Math.exp(-li * 16);
+  x.save(); x.translate(L + w / 2, 410); x.scale(1 + .14 * k, 1 + .14 * k); fill(LIME, -w / 2, -40, w, 80);
+  setFont(f); x.fillStyle = K_INK; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(str, 0, 3); x.restore();
 }
-function step1(l, t) {
-  const h = 1010, snap = 2 * BEAT, d = hh(t, .7);
-  fill(PAPER, 0, 0, W, h);
-  const z = l < snap ? 1.12 + l * .03 : 1.2 + .1 * Math.exp(-(l - snap) * 9) + (l - snap) * .012;   // punch-in when the photo is taken
-  x.save(); x.beginPath(); x.rect(0, 0, W, h); x.clip();
-  art(W / 2 + d.dx, 560 + d.dy, z, l, INK, LIME, PAPER);
-  const m = l < snap ? 150 - 22 * outExpo(cl(l / .5)) : 128, cw = W - 2 * m;                          // viewfinder
-  corners(m, 560 - cw * .55, cw, cw * 1.1, 70, INK, 5);
-  if (l < snap) { x.fillStyle = INK; x.globalAlpha = .5 + .5 * Math.sin(l * 14); x.beginPath(); x.arc(m + 34, 560 - cw * .55 + 34, 9, 0, 7); x.fill(); x.globalAlpha = 1; }
-  else { x.fillStyle = `rgba(255,252,244,${Math.exp(-(l - snap) * 9)})`; x.fillRect(0, 0, W, h); }
-  x.restore();
-  const ly = h + 84;
-  line('SCHRITT 01', L, ly, F.label(24, ACC), 0, l, { d: .5 });
-  line('01 / 03', L + TXW, ly, F.label(24), 0, l, { instant: true, align: 'right', alpha: .7 });
-  line(TP.s1[0], L, ly + 135, F.sans(fit(TP.s1[0], v => F.sans(v), 100, TXW)), .05, l, { d: .55 });
-  line(TP.s1[1], L, ly + 215, F.label(fit(TP.s1[1], v => F.label(v), 23, TXW)), snap + .05, l, { d: .55, alpha: .78 });
-}
-function step2(l) {
-  fill(LIME);
-  line('SCHRITT 02', L, T0 + 40, F.label(24, K_INK), 0, l, { d: .5 });
-  line('02 / 03', L + TXW, T0 + 40, F.label(24, K_INK), 0, l, { instant: true, align: 'right', alpha: .7 });
-  line('Das fragst du', L, T0 + 180, F.sans(88, K_INK), .05, l, { d: .55 });
-  line('die KI:', L, T0 + 285, F.serif(120, K_INK), .14, l, { d: .55 });
-  rule(L, T0 + 345, L + TXW, .3, l, K_INK, 2);
-  // the prompt types itself; size chosen so it never needs more than 6 lines
-  const full = '„' + TP.prompt + '“';
-  let sz = 118, lines; do { lines = wrapText(full, F.serif(sz, K_INK), TXW); sz -= 3; } while (lines.length * sz * 1.16 > 660); sz += 3;
-  const f = F.serif(sz, K_INK), lh = sz * 1.16, t0 = 1 * BEAT, tEnd = 6.2 * BEAT;
-  const n = Math.floor(cl((l - t0) / (tEnd - t0)) * full.length);
-  let left = n, y = T0 + 345 + lh * 1.05, cx = L, cy = y;
-  setFont(f); x.fillStyle = K_INK; x.textAlign = 'left'; x.textBaseline = 'alphabetic';
-  for (const s of lines) {
-    const part = s.slice(0, Math.max(0, left)); if (part) { setFont(f); x.fillStyle = K_INK; x.textAlign = 'left'; x.textBaseline = 'alphabetic'; x.fillText(part, L, y); cx = L + x.measureText(part).width; cy = y; }
-    left -= s.length + 1; if (left < 0) break; y += lh;
+function chat(l, t) {
+  const S1 = 0, S2 = at(6), S3 = at(16), step = l < S2 ? 0 : l < S3 ? 1 : 2, li = l - [S1, S2, S3][step];
+  const punch = 1 + .045 * Math.exp(-li * 9);
+  x.save(); x.translate(W / 2, 800); x.scale(punch, punch); x.translate(-W / 2, -800);
+  // header
+  x.beginPath(); x.arc(L + 30, 306, 30, 0, 7); x.fillStyle = LIME; x.fill(); txt('KI', L + 30, 308, 26, K_INK, 'center');
+  setFont(F.sans(36)); x.fillStyle = CREAM; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText('KI-Assistent', L + 78, 296);
+  setFont(F.label(17, 'rgba(243,237,228,.6)')); x.fillStyle = 'rgba(243,237,228,.6)'; x.fillText('ONLINE', L + 80, 330);
+  chip([`1 · ${TP.s1[0]}`, '2 · Das fragst du die KI', '3 · Das bekommst du'][step], li);
+  // layout (content coordinates, y grows downward; the view scrolls so the newest bubble stays visible)
+  const R = L + TXW, PW = 580, PH = 450, GAP = 30;
+  const pf = F.body(44, K_INK), full = TP.prompt, lines = wrapText(full, pf, 700), LH = 60;
+  const nTyped = Math.floor(cl((l - S2 - .25) / 3.2) * full.length);
+  let shown = [], left = nTyped; for (const s of lines) { if (left <= 0) break; shown.push(s.slice(0, left)); left -= s.length + 1; }
+  const y1 = 0, y2 = y1 + PH + GAP, h2 = Math.max(1, shown.length) * LH + 56, y3 = y2 + lines.length * LH + 56 + GAP;
+  const dots = step === 2 && li < .55, h3 = dots ? 110 : 3 * 92 + 50 + (TP.note ? 56 : 0);
+  const bottom = step === 0 ? y1 + PH : step === 1 ? y2 + h2 : y3 + h3;
+  chat.sc = chat.sc ?? 0; const target = Math.max(0, bottom - (CH_BOT - CH_TOP) + 10);
+  const prevBottom = step === 0 ? 0 : step === 1 ? Math.max(0, y1 + PH - (CH_BOT - CH_TOP) + 10) : Math.max(0, y2 + lines.length * LH + 56 - (CH_BOT - CH_TOP) + 10);
+  const sc = step === 1 ? target : prevBottom + (target - prevBottom) * outExpo(cl(li / .5));   // deterministic (no state between frames)
+  x.save(); x.beginPath(); x.rect(0, CH_TOP - 10, W, CH_BOT - CH_TOP + 20); x.clip(); x.translate(0, CH_TOP - sc);
+  // 1) photo / note message
+  const p1 = outExpo(cl((l - .15) / .35));
+  if (p1 > 0) {
+    x.save(); x.translate(R - PW / 2, y1 + PH / 2 + (1 - p1) * 80); x.scale(.85 + .15 * p1, .85 + .15 * p1); x.globalAlpha = Math.min(1, p1 * 2);
+    rr(-PW / 2, -PH / 2, PW, PH, 30); x.fillStyle = PAPER; x.fill(); x.save(); x.clip(); art(0, 0, .68, l, K_INK, LIME, PAPER);
+    const snap = at(2); if (l > snap) { x.fillStyle = `rgba(255,252,244,${Math.exp(-(l - snap) * 9)})`; x.fillRect(-PW / 2, -PH / 2, PW, PH); }
+    x.restore(); x.restore();
   }
-  if (l >= t0 - .3 && (n < full.length || (l % .7) < .4)) { x.fillStyle = K_INK; x.fillRect(cx + 6, cy - sz * .72, 5, sz * .86); }
-  const by = B0 - 20;
-  if (l >= tEnd + .15) { rule(L, by - 70, L + TXW, tEnd + .15, l, K_INK, 2); line('PROMPT KOPIEREN  ·  VIDEO SPEICHERN', L, by, F.label(24, K_INK), tEnd + .25, l, { d: .55 }); }
+  // 2) prompt bubble (types itself)
+  if (step >= 1) {
+    const w = 700 + 64, p2 = outExpo(cl(li / .3)), a2 = step === 1 ? p2 : 1;
+    x.save(); x.globalAlpha = Math.min(1, a2 * 2); rr(R - w, y2, w, h2, 30); x.fillStyle = LIME; x.fill();
+    setFont(pf); x.fillStyle = K_INK; x.textAlign = 'left'; x.textBaseline = 'alphabetic';
+    shown.forEach((s, i) => x.fillText(s, R - w + 32, y2 + 28 + 44 + i * LH));
+    if (nTyped < full.length && shown.length) { const s = shown[shown.length - 1]; x.fillRect(R - w + 32 + measure(s, pf) + 4, y2 + 28 + 6 + (shown.length - 1) * LH, 4, 46); }
+    x.restore();
+  }
+  // 3) answer bubble
+  if (step === 2) {
+    const w = 800; rr(L, y3, w, h3, 30); x.fillStyle = BUB; x.fill();
+    if (dots) for (let i = 0; i < 3; i++) { x.beginPath(); x.arc(L + 60 + i * 40, y3 + 55 - 8 * Math.max(0, Math.sin(li * 14 - i * .9)), 11, 0, 7); x.fillStyle = CREAM; x.fill(); }
+    else {
+      TP.res.forEach((r, i) => {
+        const st = .6 + i * .65, p = outExpo(cl((li - st) / .3)); if (p <= 0) return;
+        const yy = y3 + 78 + i * 92;
+        x.save(); x.globalAlpha = Math.min(1, p * 2); x.translate((1 - p) * 30, 0);
+        x.beginPath(); x.arc(L + 58, yy - 14, 24, 0, 7); x.fillStyle = LIME; x.fill();
+        x.strokeStyle = K_INK; x.lineWidth = 6; x.lineCap = 'round'; x.lineJoin = 'round'; x.beginPath(); x.moveTo(L + 47, yy - 14); x.lineTo(L + 55, yy - 5); x.lineTo(L + 70, yy - 24); x.stroke();
+        setFont(F.sans(fit(r, v => F.sans(v), 46, w - 150))); x.fillStyle = CREAM; x.textAlign = 'left'; x.textBaseline = 'alphabetic'; x.fillText(r, L + 104, yy); x.restore();
+      });
+      if (TP.note && li > 2.9) { const f = F.label(fit(TP.note, v => F.label(v), 19, w - 80), 'rgba(243,237,228,.6)'); setFont(f); x.fillStyle = f.color; x.textAlign = 'left'; x.fillText(TP.note, L + 36, y3 + h3 - 32); }
+    }
+  }
+  x.restore(); x.restore();
 }
-function step3(l) {
-  x.save(); x.translate(0, -l * 5 + 40);
-  line('SCHRITT 03', L, T0 + 40, F.label(24, ACC), .02, l);
-  line('03 / 03', L + TXW, T0 + 40, F.label(24), 0, l, { instant: true, align: 'right', alpha: .7 });
-  line('Das bekommst du.', L, T0 + 205, F.serif(fit('Das bekommst du.', v => F.serif(v), 150, TXW)), .1, l);
-  const y0 = T0 + 290, RH = 205;
-  TP.res.forEach((r, i) => {
-    const st = (i + 1) * BEAT - .1, y = y0 + i * RH;
-    rule(L, y, L + TXW, st, l);
-    line('0' + (i + 1), L, y + 132, F.serif(110, ACC), st + .05, l);
-    line(r, L + 165, y + 122, F.sans(fit(r, v => F.sans(v), 62, TXW - 165)), st + .1, l);
+// ---------------- captions: 1-3 spoken words at a time, timed from the voice track (vo_timing.js) ----------------
+const CAPS = (() => {
+  const out = [], vo = (window.VO || {})[NO] || [];
+  vo.forEach((s, si) => {
+    if (si === 0 || si === vo.length - 1) return;          // hook and CTA already show their words as big type
+    const chunks = []; let cur = [];
+    for (const w of s.text.split(' ')) { if (cur.length && (cur.join(' ') + ' ' + w).length > 17) { chunks.push(cur.join(' ')); cur = []; } cur.push(w); const str = cur.join(' '); if (cur.length >= 3 || str.length >= 13 || /[.?!:,]$/.test(w)) { chunks.push(str); cur = []; } }
+    if (cur.length) chunks.push(cur.join(' '));
+    const tot = chunks.reduce((n, c) => n + c.length + 1, 0); let acc = 0;
+    chunks.forEach(c => { const a = s.t + s.d * acc / tot; acc += c.length + 1; out.push({ a: a - .04, b: s.t + s.d * acc / tot - .04, str: c.replace(/[.,:]$/, '').replace('zweihundertfünfzig', '250').replace('sechshundert Euro', '600 €').replace('sechshundert', '600').replace('zwanzig', '20') }); });
   });
-  rule(L, y0 + 3 * RH, L + TXW, 3 * BEAT + .3, l);
-  if (TP.note) line(TP.note, L, y0 + 3 * RH + 70, F.label(fit(TP.note, v => F.label(v), 22, TXW)), 4.5 * BEAT, l, { alpha: .7 });
-  x.restore();
+  return out;
+})();
+function captions(t) {
+  const c = CAPS.find(c => t >= c.a && t < c.b); if (!c) return;
+  const f = F.sans(fit(c.str, v => F.sans(v), 96, TXW - 40), '#ffffff'), k = Math.exp(-(t - c.a) * 22), cx = L + TXW / 2, cy = 1352;
+  x.save(); x.translate(cx, cy); x.scale(1 + .18 * k, 1 + .18 * k); setFont(f); x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+  x.strokeStyle = K_INK; x.lineWidth = f.size * .22; x.strokeText(c.str, 0, 0); x.fillStyle = /[?!]$/.test(c.str) || /\d/.test(c.str) ? LIME : '#ffffff'; x.fillText(c.str, 0, 0); x.restore();
 }
 function cta(l, t) {
   const d = hh(t, .8), push = 1 + .012 * l + .07 * inCubic((l - 5 * BEAT) / BEAT);
@@ -247,17 +270,16 @@ window.EDIT = {
   dur: at(36), loop: true, accent: LIME, grain: .22, assets: {},
   shots: [
     { a: 0, b: at(4), f: (l, t) => { hook(l, t); bar(t, t < BEAT ? K_INK : LIME); } },
-    { a: at(4), b: at(10), f: (l, t) => { step1(l, t); bar(t, K_INK); } },
-    { a: at(10), b: at(20), f: (l, t) => { step2(l, t); bar(t, K_INK); } },
-    { a: at(20), b: at(30), f: (l, t) => { step3(l, t); bar(t, LIME); } },
+    { a: at(4), b: at(30), f: (l, t) => { chat(l, t); captions(t); bar(t, LIME); } },
     { a: at(30), b: at(36), f: (l, t) => { cta(l, t); bar(t, LIME); } },
   ],
   fx: [
     { type: 'flash', t: 0, a: .22 },
     { type: 'flash', t: at(1), a: .3 },
     { type: 'flash', t: at(2), a: .4 },
-    { type: 'whip', t: at(10), w: .1 },
-    { type: 'whip', t: at(20), w: .1, dir: -1 },
+    { type: 'whip', t: at(4), w: .08 },
+    { type: 'flash', t: at(10), a: .18 },
+    { type: 'flash', t: at(20), a: .18 },
     { type: 'leak', t: at(30) },
   ],
 };

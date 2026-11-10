@@ -144,6 +144,12 @@ tippt sich auf Akzentfläche) → Schritt 3 (Ergebnisliste) → CTA. Neues Thema
 Grafik in `ART`. Rendern für TikTok in 1080p mit kleiner Datei:
 `node promo/engine/render.js promo/ki_tipps render reel --k=1 --crf=22 --q=topic=0 --name=ki_trick_01_fernseher`
 (`--q` hängt Query-Parameter an, `--name` setzt den Dateinamen, `EDIT.grain` regelt das Filmkorn).
+Stil seit Nov 2026 (Nutzerwunsch „spannender, im Trend“; gilt nur für diese Serie, nicht für Firmen-Promos): Hook mit
+einem harten Schnitt pro Beat und Vollfläche im ersten Bild, danach eine Chat-Szene wie eine Bildschirmaufnahme
+(Foto-Nachricht, Prompt tippt sich, Antwort mit Haken), Pop-Untertitel mit 1–3 Wörtern im Takt der Stimme,
+Fortschrittsleiste. Reihenfolge: `python3 promo/ki_tipps/voiceover.py --timing` (schreibt `vo_timing.js` für die
+Untertitel) → rendern → `python3 promo/ki_tipps/voiceover.py` (mischt Stimme `vo/NN.mp3` + `vo/NN_hook.mp3` ein).
+Stimme: ElevenLabs „Jan – Social Media Creator“. Für das Creator Rewards Program braucht es Videos über 60 s.
 Ergebnisse der KI nur so versprechen, wie sie stimmen: Hinweiszeile (`note`) bei Recht, Preisen und Menünamen.
 
 ## 6. QA vor dem Abschicken

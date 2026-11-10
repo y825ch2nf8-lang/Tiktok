@@ -20,6 +20,10 @@ SCRIPTS = {
  '09': "Erst prüfen, dann unterschreiben.|Lad den Vertrag hoch und schwärz vorher deine Daten.|Dann fragst du die KI: Welche Klauseln sind ungewöhnlich oder nachteilig für mich?|Sie markiert auffällige Stellen und erklärt sie in einfachen Worten.",
  '10': "Stopp, noch nicht kaufen!|Fotografier das Produkt mit dem Preisschild.|Dann fragst du die KI: Ist dieser Preis gut? Nenn mir typische Preise und günstigere Alternativen.|Du bekommst eine Einschätzung, aber check die Preise kurz gegen.",
 }
+HOOKS = {'01': "Dein Fernseher schaut zurück.", '02': "Diesen Brief versteht kein Mensch.", '03': "Dieses Abo frisst fast 360 Euro im Jahr.", '04': "Leerer Kühlschrank? Von wegen.",
+ '05': "Versteckte Kosten auf deiner Rechnung?", '06': "Stopp! Ruf noch keinen Techniker.", '07': "Dein Handy weiß, wo du gestern warst.", '08': "Drei Stunden Verspätung? Bis zu 600 Euro.",
+ '09': "Unterschreib das noch nicht!", '10': "Stopp! Ist das wirklich ein Angebot?"}
+TIMING = {}; ONLY_TIMING = '--timing' in sys.argv      # --timing: only write vo_timing.js (caption timings for the render)
 def run(*a): return subprocess.run(a, capture_output=True, text=True)
 def probe(f): return float(run('ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f).stdout)
 
@@ -52,6 +56,9 @@ for n, txt in sorted(SCRIPTS.items()):
     pos = []; t = 0
     for (a, b), sc in zip(segs, SCENES): p = max(sc, t + 0.10); pos.append(p); t = p + (b - a)
     over = t - (DUR - 0.15)
+    texts = [HOOKS[n] if hk else parts[0]] + parts[1:]
+    TIMING[n] = [{'t': round(p, 3), 'd': round(b - a, 3), 'text': tx} for p, (a, b), tx in zip(pos, segs, texts)]
+    if ONLY_TIMING: continue
     info = ' '.join(f'{p:.2f}+{b - a:.2f}' for p, (a, b) in zip(pos, segs))
     print(n, f'take {total:.2f}s  placed: {info}  end {t:.2f}' + ('  OVERRUN' if over > 0 else ''))
     fc = ''.join(f'[1:a]atrim={a:.3f}:{b:.3f},asetpts=PTS-STARTPTS,afade=t=in:d=0.02,adelay={int(p * 1000)}:all=1[v{i}];' for i, ((a, b), p) in enumerate(zip(segs, pos)) if not (hk and i == 0))
@@ -62,3 +69,6 @@ for n, txt in sorted(SCRIPTS.items()):
     out = f'{ROOT}/output/ki_tipps/' + os.path.basename(vid).replace('_reel.mp4', '_stimme.mp4')
     r = run('ffmpeg', '-y', '-loglevel', 'error', '-i', vid, '-i', vo, *(['-i', hook] if hk else []), '-filter_complex', fc, '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-t', str(DUR), '-movflags', '+faststart', out)
     if r.returncode: print(r.stderr); sys.exit(1)
+
+import json
+open(f'{D}/vo_timing.js', 'w').write('// written by voiceover.py: where each spoken sentence sits in the video (drives the captions)\nwindow.VO = ' + json.dumps(TIMING, ensure_ascii=False, indent=1) + ';\n')
