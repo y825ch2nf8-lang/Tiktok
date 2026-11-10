@@ -49,7 +49,7 @@ for n, txt in sorted(SCRIPTS.items()):
     fc = ''.join(f'[1:a]atrim={a:.3f}:{b:.3f},asetpts=PTS-STARTPTS,afade=t=in:d=0.02,adelay={int(p * 1000)}:all=1[v{i}];' for i, ((a, b), p) in enumerate(zip(segs, pos)))
     fc += ''.join(f'[v{i}]' for i in range(5)) + 'amix=inputs=5:normalize=0,highpass=f=70,acompressor=threshold=-18dB:ratio=3:attack=5:release=120:makeup=4,apad=whole_dur=21.6,asplit[vo][sc];'
     fc += '[0:a]volume=0.55[m];[m][sc]sidechaincompress=threshold=0.02:ratio=8:attack=15:release=350[duck];'
-    fc += '[duck][vo]amix=inputs=2:normalize=0,alimiter=limit=0.8[a]'
+    fc += '[duck][vo]amix=inputs=2:normalize=0,alimiter=limit=0.8:level=0[a]'
     out = f'{ROOT}/output/ki_tipps/' + os.path.basename(vid).replace('_reel.mp4', '_stimme.mp4')
     r = run('ffmpeg', '-y', '-loglevel', 'error', '-i', vid, '-i', vo, '-filter_complex', fc, '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-t', str(DUR), '-movflags', '+faststart', out)
     if r.returncode: print(r.stderr); sys.exit(1)
