@@ -1,13 +1,15 @@
-// Video 01 "Der Black-Friday-Rabatt, der keiner ist": spoken phrases with their position in vo/01.mp3
-// (start, end in seconds, caption text, scene). Measured from the pauses in the take; LEAD is the silence before the voice.
+// Video 01 "Der Black-Friday-Rabatt, der keiner ist", casual take (vo/02.mp3, voice "Jonas"): spoken phrases with
+// start/end in the take (seconds, measured from its pauses), the words shown, and an id the edit refers to.
 window.LEAD = 0.15;
 window.DUR = 33.6;                       // 14 bars @ 100 BPM
+window.VOFILE = 'vo/02.mp3';
 window.PHRASES = [
-  [0.00, 1.63, 'Minus 50 Prozent?', 0], [2.05, 3.54, 'Dieser Rabatt ist oft gar keiner.', 0],
-  [3.95, 4.36, 'Der Trick:', 1], [4.84, 7.28, 'Der durchgestrichene Preis ist oft die UVP,', 1], [7.48, 10.10, 'eine Preisempfehlung, die im Laden kaum jemand bezahlt.', 1],
-  [10.43, 10.88, 'Beispiel:', 2], [11.21, 13.20, 'UVP 129 Euro,', 2], [13.37, 14.58, 'jetzt 79,', 2], [14.71, 16.68, 'sieht aus wie minus 39 Prozent.', 2],
-  [17.01, 19.91, 'Vor vier Wochen kostete das Ding aber 84 Euro,', 3], [20.17, 21.07, 'echte Ersparnis:', 3], [21.28, 21.88, '5 Euro.', 3],
-  [22.25, 27.82, 'Laut Idealo lag die echte Ersparnis am Black Friday 2024 im Schnitt bei nur 7 Prozent.', 4],
-  [28.17, 28.51, 'Also:', 5], [28.77, 30.09, 'Erst den Preisverlauf checken,', 5], [30.33, 30.94, 'dann kaufen.', 5],
-  [31.25, 32.68, 'Folg mir für mehr Verkaufstricks.', 6],
+  [0.00, 0.51, 'Okay.', 'okay'], [0.82, 2.22, 'Minus 50 Prozent?', 'm50'], [2.59, 3.20, 'Glaub ich nicht.', 'glaub'], [3.53, 3.88, 'Pass auf.', 'pass'],
+  [4.34, 6.87, 'Der durchgestrichene Preis ist oft nur die UVP.', 'trick'], [7.22, 8.11, 'Die zahlt eh keiner.', 'keiner'],
+  [8.50, 8.95, 'Beispiel:', 'bsp'], [9.17, 9.67, 'Kopfhörer.', 'kopf'], [10.17, 10.78, 'UVP', 'uvp'], [10.94, 12.17, '129 Euro.', 'n129'],
+  [12.50, 12.86, 'Jetzt', 'jetzt'], [13.03, 13.74, '79.', 'n79'], [14.14, 15.97, 'Klingt nach minus 39 Prozent.', 'klingt'],
+  [16.33, 17.10, 'Vor vier Wochen?', 'vor'], [17.51, 18.44, '84 Euro.', 'n84'], [18.93, 19.40, 'haha', 'haha'], [19.67, 21.27, 'Du sparst also 5 Euro.', 'spar'],
+  [21.70, 22.65, 'Und das ist normal.', 'normal'], [22.84, 26.40, 'Laut Idealo waren es am Black Friday 2024 im Schnitt', 'idealo'], [26.50, 27.53, 'nur 7 Prozent.', 'n7'],
+  [27.90, 28.23, 'Also:', 'also'], [28.60, 29.87, 'Erst Preisverlauf checken.', 'erst'], [30.18, 30.79, 'Dann kaufen.', 'dann'],
+  [31.21, 33.09, 'Folg mir, wenn du nicht mehr drauf reinfallen willst.', 'folg'],
 ];
