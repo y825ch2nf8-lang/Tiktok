@@ -150,6 +150,12 @@ einem harten Schnitt pro Beat und Vollfläche im ersten Bild, danach eine Chat-S
 Fortschrittsleiste. Reihenfolge: `python3 promo/ki_tipps/voiceover.py --timing` (schreibt `vo_timing.js` für die
 Untertitel) → rendern → `python3 promo/ki_tipps/voiceover.py` (mischt Stimme `vo/NN.mp3` + `vo/NN_hook.mp3` ein).
 Stimme: ElevenLabs „Jan – Social Media Creator“. Für das Creator Rewards Program braucht es Videos über 60 s.
+**Bevorzugter Stil des Nutzers (Referenzvideo vom 10.11.2026, „so ein Stil ist cool“): Mono-Kinetik.** Nur reines Schwarz
+und Weiß mit harten Umkehrungen, ein Gedanke pro Bild, zentrierte Grotesk (fett + grau/leicht gemischt), Wörter
+erscheinen einzeln im Takt der Stimme aus der Unschärfe, dazu minimale Datengrafik (hochzählende Zahl, leuchtende
+Kurve, Raster, Piktogramme). Kein Akzent, kein Korn, keine Extra-Untertitel. Umsetzung: `promo/verkaufstricks_mono/`
+(ein Shot pro gesprochener Phrase aus `cues.js`, Helfer `win`/`row`/`settle`). Der Nutzer will Analyse und Themen
+zuerst und Videos nur auf Zuruf, nicht ungefragt Serien rendern.
 Ergebnisse der KI nur so versprechen, wie sie stimmen: Hinweiszeile (`note`) bei Recht, Preisen und Menünamen.
 
 ## 6. QA vor dem Abschicken
