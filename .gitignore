@@ -30,3 +30,4 @@ promo/*/out/
 promo/*/music.wav
 promo/*/*.log
 promo/engine/models/
+promo/*/src/
