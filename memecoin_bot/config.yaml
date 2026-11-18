@@ -1,0 +1,63 @@
+# Memecoin-Bot Einstellungen (python -m memecoin_bot)
+
+# Chains, die über Trust Wallet kaufbar sind und gescannt werden
+chains: [solana, bsc, ethereum, base]
+
+# Welche GeckoTerminal-Trendlisten pro Chain geladen werden: [Zeitraum, Seite]
+trending_lists:
+  - ["24h", 1]
+  - ["24h", 2]
+  - ["6h", 1]
+  - ["1h", 1]
+include_top_volume: false    # zusätzlich die Pools mit dem höchsten Volumen (viele Nicht-Memes, mehr API-Aufrufe)
+
+# Vorfilter: nur diese Tokens kommen in die Tiefenprüfung
+filters:
+  min_mcap_usd: 150000       # kleiner = meist reine Zockerei / Rug in Minuten
+  max_mcap_usd: 30000000     # größer = nicht mehr "früh"
+  min_liquidity_usd: 40000   # darunter kannst du nicht sauber verkaufen
+  min_liq_ratio: 0.03        # Liquidität / Market Cap (darunter Warnung)
+  min_volume24_usd: 100000
+  min_age_days: 1.0          # jünger = Ausschluss (extremes Rug-Risiko)
+
+deep_check_count: 10         # so viele Kandidaten werden tief geprüft (~5–10 s pro Token)
+max_per_chain: 6
+trade_min_usd: 500           # "große Trades" für den Whale-Flow
+whale_trade_usd: 5000        # ab hier zählt ein Trade als Whale-Trade
+
+# Harte Ausschlussgründe (Red Flags)
+red_flags:
+  max_top1_pct: 15           # eine einzelne Wallet (ohne Pools/Locker)
+  max_top10_pct: 50
+  max_dev_pct: 10            # Entwickler-/Ersteller-Anteil
+  max_insider_cluster_pct: 25  # verbundene Wallets (RugCheck-Insider-Graph)
+  max_tax_pct: 5             # Kauf-/Verkaufssteuer
+  min_lp_locked_pct: 80      # gesperrte/verbrannte Liquidität
+  max_pump_24h_pct: 300      # schon explodiert -> kein früher Einstieg
+
+recommend:
+  min_score: 60              # darunter: "kein überzeugender Coin – kein Kauf"
+  max_position_eur: 100      # empfohlene Maximalposition (Spielgeld)
+
+# Kostenmodell für die Szenarien (Schätzungen – die Swap-Vorschau in Trust Wallet zeigt die echten Kosten)
+costs:
+  onramp_pct: 2.0            # SOL/BNB/ETH per Karte in Trust Wallet kaufen (anbieterabhängig ca. 1–4,5 %)
+  swap_pct: 1.0              # Trust-Wallet-/Aggregator-Gebühr + Pool-Gebühr
+  exit_slippage_pct: 0.5
+  eur_usd_fallback: 1.15     # wird live über den Euro-Stablecoin EURC ersetzt
+
+scenario_amounts_eur: [100, 500, 1000]
+scenario_multiples: [5, 10, 20, 50]
+
+# Typische Netzwerkgebühr pro Swap in nativer Währung (Schätzung)
+network_fee_native:
+  solana: 0.0001             # + einmalig ~0,002 SOL für das Token-Konto (erstattbar)
+  bsc: 0.0001
+  ethereum: 0.0008
+  base: 0.00002
+
+# Keine Memecoins: Stablecoins, Majors, DeFi-/Infrastruktur-Tokens
+skip_symbols: [SOL, WSOL, USDC, USDT, USDG, USD1, USDE, SUSDE, USDS, DAI, FDUSD, BUSD, PYUSD, EURC, WETH, ETH,
+  CBETH, WSTETH, STETH, WBNB, BNB, BTCB, CBBTC, WBTC, CIRBTC, JUP, RAY, CAKE, AERO, VIRTUAL, PENDLE, LINK, UNI,
+  AAVE, ZRO, NEAR, LYX, KTA, BANK, EVAA, BLESS, LIGHT, HANA, JCT, CBHYPE, QUID, XDP, BNCB, TART, AXIS, ELSA,
+  SDLR, GDLR, WPRL, BSW, USDT.Z, VELVET, PROS, INFI, REI, SOGNI, SURPLUS, OWB, PIRATE, AGC, CLANKER]

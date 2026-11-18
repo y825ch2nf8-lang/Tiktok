@@ -209,4 +209,5 @@ src/
   exporter.py           Dateinamen, Verifikation, Metadaten
 assets/ data/ output/   Eingaben, Beispieldaten, Ergebnisse
 ball_escape/            Satisfying-Physik-Videos „Kann der Ball 12 Ringe zerstören?“ (Node, siehe ball_escape/README.md)
+memecoin_bot/           Telegram-Bot: Memecoin-Scanner für Trust Wallet (siehe memecoin_bot/README.md)
 ```
