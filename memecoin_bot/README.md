@@ -108,6 +108,8 @@ python -m pytest memecoin_bot/tests         # automatische Tests
 | Momentum | 7 | Aufwärtstrend, aber nicht parabolisch |
 | Nicht überhitzt | 8 | keine +200 % in 24 h |
 
+Abzüge: jede Warnung −2 Punkte (max. −12), „Hype schon gelaufen“ zusätzlich −10.
+Ab **60 Punkten** wird der beste Coin Favorit, darunter heißt es „kein überzeugender Coin – keine Kaufempfehlung“.
 Alle Schwellen stehen in `memecoin_bot/config.yaml` und lassen sich ändern.
 
 ## Ehrliche Grenzen

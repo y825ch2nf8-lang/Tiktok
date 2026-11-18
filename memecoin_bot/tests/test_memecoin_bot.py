@@ -248,3 +248,34 @@ def test_telegram_api_splits_and_falls_back_to_plain_text():
     s.posts.clear()
     api.send(1, "<b>ok</b> <broken")
     assert [p[1].get("parse_mode") for p in s.posts] == ["HTML", None]
+
+
+def test_stop_level_never_below_minus_50_percent():
+    day = 86_400
+    # junger Token: Starttag sehr billig, dann +100x -> Stop darf nicht beim Starttags-Preis liegen
+    rows = [[i * day, 1, 1, 1, c, 100] for i, c in enumerate([0.00001, 0.0005, 0.0009, 0.001])]
+    c = _cand(chain="solana", price=0.001, mcap=1e6)
+    a = analyze(c, Deep(ohlcv=rows, rugcheck={"token": {"supply": 1}, "score_normalised": 1}), CFG)
+    conds = " ".join(report.conditions_block(a, CFG))
+    assert "−50 % Stop-Loss" in conds and "0,000500 $" in conds
+
+
+def test_48h_run_up_counts_as_overextended():
+    day = 86_400
+    flat = [[i * day, 1, 1, 1, 1.0, 100] for i in range(10)]
+    pumped = flat[:-2] + [[8 * day, 1, 1, 1, 2.0, 100], [9 * day, 1, 1, 1, 3.0, 100]]
+    gp = {"is_honeypot": "0", "buy_tax": "0", "sell_tax": "0", "owner_address": "", "is_open_source": "1"}
+    calm = analyze(_cand(price=1.0), Deep(ohlcv=flat, goplus=gp), CFG)
+    hot = analyze(_cand(price=3.0), Deep(ohlcv=pumped, goplus=gp), CFG)
+    assert hot.components["not_extended"] < calm.components["not_extended"]
+    assert any("nicht hinterherkaufen" in w for w in hot.warnings)
+
+
+def test_launchpad_creator_is_warning_not_red_flag():
+    gp = {"is_honeypot": "0", "buy_tax": "0", "sell_tax": "0", "owner_address": "", "is_open_source": "1",
+          "creator_address": "0xfac", "creator_percent": "1.000000",
+          "holders": [{"address": "0xfac", "percent": "0.8", "is_contract": 1},
+                      {"address": "0x1", "percent": "0.02", "is_contract": 0}]}
+    a = analyze(_cand(), Deep(goplus=gp), CFG)
+    assert not any("Ersteller" in r for r in a.red_flags)
+    assert any("Launchpad" in w for w in a.warnings)

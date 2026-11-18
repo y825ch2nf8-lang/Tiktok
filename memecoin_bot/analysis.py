@@ -205,8 +205,8 @@ def ohlcv_metrics(ohlcv: list | None, price_now: float | None = None) -> dict:
         m["dd_from_high"] = last / hi - 1
         idx = highs.index(hi)
         m["high_days_ago"] = len(highs) - 1 - idx
-    lows7 = [c for c in closes[-8:-1] if c > 0]
-    m["swing_low"] = min(lows7) if lows7 else None
+    lows = [c for c in closes[-4:-1] if c > 0]  # Tief der letzten 3 abgeschlossenen Tage
+    m["swing_low"] = min(lows) if len(lows) >= 2 else None
     return m
 
 
@@ -314,6 +314,10 @@ def evm_security(gp: dict | None, hp: dict | None) -> dict:
                      if h.get("is_locked") == 1 or str(h.get("address", "")).lower() in DEAD_ADDRESSES)
         holders = [h for h in gp.get("holders") or [] if not h.get("is_contract")
                    and str(h.get("address", "")).lower() not in DEAD_ADDRESSES]
+        creator = str(gp.get("creator_address") or "").lower()
+        creator_is_contract = any(str(h.get("address", "")).lower() == creator and h.get("is_contract")
+                                  for h in gp.get("holders") or [])
+        creator_pct = (fnum(gp.get("creator_percent"), 0.0) or 0) * 100
         out.update({
             "honeypot": _gp_flag(gp, "is_honeypot"), "cannot_sell_all": _gp_flag(gp, "cannot_sell_all"),
             "buy_tax": (fnum(gp.get("buy_tax"), 0.0) or 0) * 100, "sell_tax": (fnum(gp.get("sell_tax"), 0.0) or 0) * 100,
@@ -326,7 +330,9 @@ def evm_security(gp: dict | None, hp: dict | None) -> dict:
             "lp_locked_pct": locked * 100 if lp else None,
             "top1": fnum(holders[0].get("percent"), 0.0) * 100 if holders else None,
             "top10": sum(fnum(h.get("percent"), 0.0) for h in holders[:10]) * 100 if holders else None,
-            "creator_pct": (fnum(gp.get("creator_percent"), 0.0) or 0) * 100,
+            # Launchpad-Factory/Bonding-Curve als "Ersteller" ist kein Entwickler-Bestand
+            "creator_pct": 0.0 if creator_is_contract or creator_pct >= 99 else creator_pct,
+            "creator_launchpad": creator_is_contract or creator_pct >= 99,
             "holders_gp": int(fnum(gp.get("holder_count"), 0) or 0) or None,
         })
     if hp:
@@ -430,6 +436,9 @@ def analyze(c: Candidate, d: Deep, cfg: dict) -> Analysis:
             warn.append("LP-Sperre nicht prüfbar (V3/V4-Pool)")
         if (sec.get("creator_pct") or 0) > rf["max_dev_pct"]:
             red.append(f"Ersteller hält {sec['creator_pct']:.0f} %")
+        if sec.get("creator_launchpad"):
+            warn.append("Ersteller-Adresse hält fast alles – vermutlich Launchpad-/Bonding-Curve-Contract, "
+                        "Verteilung manuell prüfen")
         if not red and sec.get("owner_renounced") and d.goplus:
             pos.append("Contract: kein Honeypot, 0 % Steuer, Ownership abgegeben")
 
@@ -460,8 +469,8 @@ def analyze(c: Candidate, d: Deep, cfg: dict) -> Analysis:
     if c.liquidity / max(c.mcap, 1) < f["min_liq_ratio"]:
         warn.append(f"Dünne Liquidität: nur {de(c.liquidity / max(c.mcap, 1) * 100)} % der Market Cap")
     if om.get("dd_from_high") is not None and om["dd_from_high"] < -0.7 and om.get("high_days_ago", 99) <= 7:
-        warn.append(f"Hype schon gelaufen: {om['dd_from_high'] * 100:.0f} % unter dem Hoch von vor "
-                    f"{om['high_days_ago']} Tag(en)")
+        when = {0: "von heute", 1: "von gestern"}.get(om["high_days_ago"], f"von vor {om['high_days_ago']} Tagen")
+        warn.append(f"Hype schon gelaufen: {om['dd_from_high'] * 100:.0f} % unter dem Hoch {when}")
     if om.get("chg48h") is not None and om["chg48h"] > 0.5:
         warn.append(f"Kurz zuvor stark gestiegen ({_pct(om['chg48h'] * 100)} in 48 h) – nicht hinterherkaufen")
     if c.boosts:
@@ -491,7 +500,8 @@ def analyze(c: Candidate, d: Deep, cfg: dict) -> Analysis:
         comp["momentum"] = clamp01((chg7 + 0.4) / 0.9)
     else:  # parabolisch -> Rücksetzer-Gefahr
         comp["momentum"] = 0.3
-    comp["not_extended"] = clamp01(1 - ((c.pc24 or 0) - 50) / 250)
+    run_up = max(c.pc24 or 0, (om.get("chg48h") or 0) * 100)  # schon gelaufen? 24 h oder 48 h
+    comp["not_extended"] = clamp01(1 - (run_up - 50) / 250)
     score = sum(WEIGHTS[k] * v for k, v in comp.items())
     if any(w.startswith("Hype schon gelaufen") for w in warn):
         score -= 10
@@ -515,4 +525,5 @@ def analyze(c: Candidate, d: Deep, cfg: dict) -> Analysis:
     if c.chain == "solana" and sec.get("lp_locked_pct") is not None and sec["lp_locked_pct"] >= 99:
         pos.append("Liquidität 100 % gesperrt")
 
-    return Analysis(c, m, red, warn, pos, round(max(score, 0), 1), comp)
+    score -= min(2 * len(warn), 12)  # jedes Warnsignal kostet Punkte
+    return Analysis(c, m, red, warn, pos, float(round(max(score, 0))), comp)

@@ -20,8 +20,8 @@ filters:
   min_volume24_usd: 100000
   min_age_days: 1.0          # jünger = Ausschluss (extremes Rug-Risiko)
 
-deep_check_count: 10         # so viele Kandidaten werden tief geprüft (~5–10 s pro Token)
-max_per_chain: 6
+deep_check_count: 15         # so viele Kandidaten werden tief geprüft (~5 s pro Token)
+max_per_chain: 8
 trade_min_usd: 500           # "große Trades" für den Whale-Flow
 whale_trade_usd: 5000        # ab hier zählt ein Trade als Whale-Trade
 

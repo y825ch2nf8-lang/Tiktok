@@ -127,7 +127,7 @@ def short_card(i: int, a: Analysis, min_score: float) -> str:
     low = " · ⚠️ unter Mindest-Score" if a.score < min_score else ""
     lines = [f"<b>{i}. {h(c.symbol)}</b> ({CHAIN_INFO[c.chain]['name'].split(' ')[0]}) · Score <b>{a.score:.0f}</b>/100{low}",
              f"MC {usd(c.mcap)} · Liq {usd(c.liquidity)} · Vol 24h {usd(c.vol24)}",
-             f"24h {pct(c.pc24)} · 7T {pct((m.get('chg7d') or 0) * 100) if m.get('chg7d') is not None else '?'}"
+             f"24h {pct(c.pc24)} · 7T {pct(m['chg7d'] * 100) if m.get('chg7d') is not None else 'n/a (zu jung)'}"
              f" · Holder {num_de(m['holders']) if m.get('holders') else '?'}"
              f" · Top 10 {num_de(m['top10']) + ' %' if m.get('top10') is not None else '?'}"]
     for p in a.positives[:2]:
@@ -173,6 +173,9 @@ def potential_block(a: Analysis, biggest: Candidate | None, cfg: dict) -> str:
                          f"sehr unwahrscheinlich.")
         else:
             lines.append(f"Schon 5x ({usd(c.mcap * 5)}) wäre mehr als das größte Meme im Scan – sehr unwahrscheinlich.")
+    if not biggest:
+        lines.append("Nötige Market Cap: " + " · ".join(f"{m:g}x = {usd(c.mcap * m)}" for m in mults)
+                     + " (Vergleich mit dem größten Meme nach /scan)")
     lines.append("Häufigster Ausgang bei Memecoins: Verlust. Plane mit Totalverlust.")
     return "\n".join(lines)
 
@@ -206,9 +209,11 @@ def conditions_block(a: Analysis, cfg: dict) -> list[str]:
     if hot:
         conds.append(f"Nicht hinterherkaufen: 24–48 h Konsolidierung abwarten, Einstiegszone ≈ MC "
                      f"{usd(c.mcap * 0.75)}–{usd(c.mcap * 0.9)}")
-    if m.get("swing_low") and sup:
-        conds.append(f"Ausstieg (Invalidierung): Tagesschluss unter {price(m['swing_low'])} "
-                     f"(MC ≈ {usd(m['swing_low'] * sup)}, 7-Tage-Tief)")
+    if sup:
+        stop, why = c.price * 0.5, "−50 % Stop-Loss"
+        if m.get("swing_low") and m["swing_low"] >= stop:
+            stop, why = m["swing_low"], "Tief der letzten 3 Tage"
+        conds.append(f"Ausstieg (Invalidierung): Tagesschluss unter {price(stop)} (MC ≈ {usd(stop * sup)}, {why})")
     conds.append(f"Liquidität bleibt ≥ {usd(c.liquidity * 0.8)} und Volumen ≥ "
                  f"{usd(max(c.vol24 * 0.5, cfg['filters']['min_volume24_usd']))}/Tag")
     if m.get("holders"):
@@ -241,7 +246,7 @@ def detail(a: Analysis, cfg: dict, market: Market, biggest: Candidate | None = N
     L.append(f"MC {usd(c.mcap)} (FDV {usd(c.fdv)}) · Preis {price(c.price)}")
     L.append(f"Liquidität {usd(c.liquidity)} ({num_de(m.get('liq_ratio', 0) * 100, 1)} % der MC) · Vol 24h {usd(c.vol24)}")
     chg7 = m.get("chg7d")
-    L.append(f"Kurs 1h {pct(c.pc1)} · 24h {pct(c.pc24)} · 7T {pct(chg7 * 100) if chg7 is not None else '?'}"
+    L.append(f"Kurs 1h {pct(c.pc1)} · 24h {pct(c.pc24)} · 7T {pct(chg7 * 100) if chg7 is not None else 'n/a (zu jung)'}"
              + (f" · {pct(m['dd_from_high'] * 100)} vom 30T-Hoch" if m.get("dd_from_high") is not None else ""))
     if m.get("vol_trend") is not None:
         L.append(f"Volumen-Trend: {num_de(m['vol_trend'], 1)}× (Ø letzte 3 Tage vs. 7 Tage davor)")
