@@ -56,6 +56,7 @@ Version 1 von „Bonn leuchtet“ wirkte nach KI. Der Nutzer hat sie abgelehnt. 
    - Instagram, Firmen-Websites und Stock-Seiten sind in Cloud-Sessions oft gesperrt. Dann mit dem Material aus dem
      Chat arbeiten und dem Nutzer sagen, welche Domain freigegeben werden müsste. Für mehr Qualität echte Clips
      anfragen (Handyvideos der Bar, Drinks, Gäste).
+2. **Kunden-Fakten Kehl Event:** Keine feste Speisekarte und keine feste Cocktailkarte. Menü und Drinks werden für jeden Kunden individuell zusammengestellt. Gerichte von Fotos immer als „Menü dieses Abends“ zeigen, nie als Standardangebot.
 2. **Fakten nur aus dem Material.** Leistungen, Daten und Orte nur aus Screenshots, Bio und Hashtags. Keine
    erfundenen Preise, Kapazitäten oder Kundenzahlen. Fremde Fotos (z. B. von der Stadt) nicht in ein
    Firmenvideo übernehmen.

@@ -1,7 +1,8 @@
 // Kehl Event — "Kunst, die man essen kann." Kampagnenfilm, Catering im August-Macke-Haus Bonn.
 // Idee: Das Buffet wird wie eine Ausstellung inszeniert. Galeriewand, Rahmen, Spot, Museumsschild (Werkangaben = Speisekarte).
 // 30 s = 12 Takte @ 96 BPM, Loop. Satz-Loop: "Kehl Event —" -> "Kunst, die man essen kann."
-// Übergänge: Push-Through in den Rahmen (Speed-Ramp), Lichtschwenk, Whip, Iris aus dem Glasrand (Match-Cut),
+// Kehl Event hat keine feste Karte: Menü und Cocktails werden für jeden Kunden individuell zusammengestellt.
+// Die Gerichte stammen aus dem Menü DIESES Abends. Übergänge: Push-Through in den Rahmen (Speed-Ramp), Lichtschwenk, Whip, Iris aus dem Glasrand (Match-Cut),
 // Zoom-Through, Katalogseite schiebt sich ins Bild, Licht aus. Fakten nur aus Speisekarte und Location-Tag.
 const BPM_ = 96, BEAT = 60 / BPM_, at = b => b * BEAT;
 const ORANGE = '#e8853a', WALL = '#e9e4dc', PAPER = '#efe7da', KI = '#0f0d0b', KC = '#f3ede4', CARD = '#f7f3ec', GREY = '#77706a';
@@ -59,7 +60,7 @@ function card(X, Y, no, title, mat, l, t0 = 0, o = {}) {
   fill(ORANGE, X, Y, 6 * S, h);
   x.restore();
   const lt = o.textAt ?? t0 + .15, px = X + 36 * S;
-  line('KEHL EVENT', px, Y + 52 * S, F.label(17 * S, GREY), lt, l, { d: .5 });
+  line(o.label || 'KEHL EVENT', px, Y + 52 * S, F.label(17 * S, GREY), lt, l, { d: .5 });
   if (no) line(no, X + w - 30 * S, Y + 52 * S, F.label(17 * S, GREY), lt, l, { d: .5, align: 'right' });
   const ts = fit(title, v => F.serif(v, KI), 66 * S, w - 72 * S);
   line(title, px, Y + 128 * S, F.serif(ts, KI), lt + .06, l, { d: .55 });
@@ -138,28 +139,30 @@ const dish = i => (l, t) => {
   if (i === 4) zoomBlur((1 - outCubic(cl(l / .35))) * 2.6);
   if (i === 3) zoomBlur(Math.pow(cl((l - (DL - .32)) / .32), 3) * 2.6);
   // Schild bleibt stehen, nur die Angaben wechseln
-  card(CARD_X(), CARD_Y(), `NO. 0${i + 1} / 06`, d.n, d.m, l, 0, { instant: true, textAt: .04 });
+  card(CARD_X(), CARD_Y(), `NO. 0${i + 1} / 06`, d.n, d.m, l, 0, { instant: true, textAt: .04, label: 'NUR FÜR DIESEN ABEND' });
 };
 
 // ---------- 4  Katalog (Break): die Seite schiebt sich ins Bild ----------
-const MENU = [['01', 'Schnittchen', 'Roggenbrot mit Brie, Salami & mehr.'], ['02', 'Gläschen', 'Salate, Frikadellen, Lachs-Röllchen.'], ['03', 'Dessert', 'Obstsalat & Mousse au chocolat.']];
+const MENU = [['01', 'Ihr erzählt.', 'Anlass, Gäste, Geschmack.'], ['02', 'Wir komponieren.', 'Euer Menü. Eure Cocktails.'], ['03', 'Ihr genießt.', 'Ein Unikat, nur für euch.']];
 function catalogPage(l) {
-  fill(PAPER);
-  line('AUSSTELLUNGSKATALOG', L, T0 + 60 * S, F.label(22 * S, ORANGE), .25, l);
-  line('Die Karte.', L, T0 + 250 * S, F.serif(170 * S, KI), .32, l);
-  const y0 = T0 + 360 * S, RH = 220 * S;
+  fill(PAPER); x.save(); x.translate(0, FEED ? 0 : 130);
+  line('KEINE STANDARDKARTE', L, T0 + 60 * S, F.label(22 * S, ORANGE), .25, l);
+  line('Jedes Menü', L, T0 + 200 * S, F.serif(130 * S, KI), .32, l);
+  line('ein Unikat.', L, T0 + 325 * S, F.serif(130 * S, ORANGE), .4, l);
+  const y0 = T0 + 420 * S, RH = 210 * S;
   MENU.forEach((r, i) => {
     const st = (i + 1) * BEAT - .05, y = y0 + i * RH;
     rule(L, y, W - L, st, l, 'rgba(15,13,11,.25)');
     line(r[0], L, y + 145 * S, F.serif(110 * S, ORANGE), st + .05, l);
-    line(r[1], L + 170 * S, y + 102 * S, F.sans(74 * S, KI), st + .1, l);
+    line(r[1], L + 170 * S, y + 102 * S, F.sans(fit(r[1], v => F.sans(v), 70 * S, W - 2 * L - 170 * S), KI), st + .1, l);
     line(r[2], L + 170 * S, y + 160 * S, F.body(34 * S, '#4a443e'), st + .18, l);
   });
   rule(L, y0 + 3 * RH, W - L, 3 * BEAT + .3, l, 'rgba(15,13,11,.25)');
+  x.restore();
 }
 function catalog(l, t) {
   const p = outExpo(cl(l / .55));
-  if (p < 1) { dishImg(5, l + DL, t); card(CARD_X(), CARD_Y(), 'NO. 06 / 06', DISH[5].n, DISH[5].m, 9, 0, { instant: true }); }
+  if (p < 1) { dishImg(5, l + DL, t); card(CARD_X(), CARD_Y(), 'NO. 06 / 06', DISH[5].n, DISH[5].m, 9, 0, { instant: true, label: 'NUR FÜR DIESEN ABEND' }); }
   const y = H * (1 - p);
   x.save(); x.beginPath(); x.rect(0, y, W, H); x.clip(); x.translate(0, y * .35); catalogPage(l); x.restore();
   if (p < 1) { const g = x.createLinearGradient(0, y - 40, 0, y); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.35)'); x.fillStyle = g; x.fillRect(0, y - 40, W, 40); }
@@ -204,7 +207,7 @@ function cta(l, t) {
     x.save(); x.translate(W / 2, cy); x.scale(sc, sc); x.beginPath(); x.roundRect(-pw / 2, -ph / 2, pw, ph, ph / 2); x.fillStyle = ORANGE; x.fill();
     setFont(f); x.fillStyle = KI; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('kehl-event.de', 0, 4 * S); x.restore();
   }
-  line('CATERING & MOBILE BARS  ·  JETZT ANFRAGEN', W / 2, ty + (FEED ? 300 : 315) * S, F.label(20 * S, KI), at(5), l, { align: 'center', alpha: .7 });
+  line('MENÜ & COCKTAILS NACH WUNSCH  ·  JETZT ANFRAGEN', W / 2, ty + (FEED ? 300 : 315) * S, F.label(20 * S, KI), at(5), l, { align: 'center', alpha: .7 });
 }
 
 // ---------- 8  Licht aus, Endkarte ----------
