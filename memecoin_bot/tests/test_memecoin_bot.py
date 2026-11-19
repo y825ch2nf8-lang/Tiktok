@@ -9,7 +9,7 @@ from memecoin_bot.demo import NOW_S, TOKENS, demo_scanner
 from memecoin_bot.scanner import load_config
 from memecoin_bot.scenarios import price_impact_pct, scenario
 from memecoin_bot.sources import Http
-from memecoin_bot.telegram_bot import Bot, parse_allowed
+from memecoin_bot.telegram_bot import Bot, parse_allowed, parse_users
 
 CFG = load_config()
 
@@ -279,3 +279,15 @@ def test_launchpad_creator_is_warning_not_red_flag():
     a = analyze(_cand(), Deep(goplus=gp), CFG)
     assert not any("Ersteller" in r for r in a.red_flags)
     assert any("Launchpad" in w for w in a.warnings)
+
+
+def test_username_allowlist():
+    api = FakeAPI()
+    bot = Bot(api, demo_scanner(CFG), allowed=set(), allowed_users=parse_users("@MaxCrypto, anna_1"))
+    upd = {"update_id": 1, "message": {"text": "/hilfe", "chat": {"id": 5}, "from": {"username": "maxcrypto"}}}
+    bot.handle(upd)
+    assert "/scan" in api.sent[-1][1]
+    upd["message"]["from"]["username"] = "fremder"
+    bot.handle(upd)
+    assert "privat" in api.sent[-1][1] and "fremder" in api.sent[-1][1]
+    assert parse_users("@MaxCrypto, x, anna_1") == {"maxcrypto", "anna_1"}

@@ -84,15 +84,16 @@ def main(argv=None):
             sys.exit("Kein Pool zu dieser Adresse gefunden.")
         print(plain(report.detail(res[0], cfg, res[1])))
     elif args.cmd == "bot":
-        from .telegram_bot import Bot, TelegramAPI, parse_allowed
+        from .telegram_bot import Bot, TelegramAPI, parse_allowed, parse_users
         token = os.getenv("MEMECOIN_BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN")
         if not token:
             sys.exit("Bot-Token fehlt. Bot bei @BotFather anlegen und als MEMECOIN_BOT_TOKEN in die .env eintragen.")
         allowed = parse_allowed(os.getenv("TELEGRAM_ALLOWED_CHATS"), os.getenv("TELEGRAM_CHAT_ID"))
-        if not allowed:
-            print("⚠️  Keine erlaubte Chat-ID gesetzt. Schreib dem Bot /start – er antwortet mit deiner Chat-ID.\n"
-                  "   Trage sie als TELEGRAM_ALLOWED_CHATS in die .env ein und starte neu.", flush=True)
-        Bot(TelegramAPI(token), Scanner(cfg), allowed).run_forever()
+        users = parse_users(os.getenv("TELEGRAM_ALLOWED_USERS"))
+        if not allowed and not users:
+            print("⚠️  Niemand freigeschaltet. Setze TELEGRAM_ALLOWED_USERS=deinTelegramName (ohne @) oder schreib dem "
+                  "Bot /start – er antwortet mit deiner Chat-ID für TELEGRAM_ALLOWED_CHATS.", flush=True)
+        Bot(TelegramAPI(token), Scanner(cfg), allowed, users).run_forever()
 
 
 if __name__ == "__main__":

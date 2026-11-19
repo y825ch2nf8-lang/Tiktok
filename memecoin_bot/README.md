@@ -26,40 +26,55 @@ Findet er nichts Überzeugendes, sagt er das klar: **„keine Kaufempfehlung“*
 | `/status` | Wann war der letzte Scan, wer war Favorit? |
 | `/hilfe` | Übersicht |
 
-## Einrichtung (ca. 10 Minuten)
+## Einrichtung nur mit dem Handy (Railway, ca. 10 Minuten)
 
-### 1. Bot bei Telegram anlegen
-1. Schreib in Telegram **@BotFather** an → `/newbot` → Name und Benutzername wählen.
-2. Du bekommst einen **Token** (sieht aus wie `123456789:AAH...`). Den gibst du niemandem.
+Der Bot läuft auf **Railway**, einem Cloud-Dienst, den du komplett im Handy-Browser bedienst.
+Kosten: der erste Monat ist mit Testguthaben gratis, danach ca. 5 $/Monat (Hobby-Plan).
 
-### 2. `.env` ausfüllen
-Kopiere `.env.example` nach `.env` (im Hauptordner des Projekts) und trage ein:
-```
-MEMECOIN_BOT_TOKEN=123456789:AAH...
-TELEGRAM_ALLOWED_CHATS=
-```
+**1. Bot bei Telegram anlegen**
+In Telegram **@BotFather** öffnen → `/newbot` → Name und Benutzername (endet auf `bot`) wählen →
+den **Token** kopieren (z. B. `7123456789:AAH...`). Den gibst du niemandem.
 
-### 3. Starten
-```bash
-pip install -r requirements.txt
-python -m memecoin_bot bot
-```
+**2. Auf Railway starten**
+1. **railway.com** im Handy-Browser öffnen → **Login with GitHub** (das Konto mit dem Projekt „Tiktok“).
+2. **New Project** → **Deploy from GitHub repo** → Zugriff auf **Tiktok** erlauben → auswählen.
+3. Auf den Service tippen → **Variables** → **Raw Editor** → diese drei Zeilen einfügen und ausfüllen:
+   ```
+   MEMECOIN_BOT_TOKEN=7123456789:AAH...
+   TELEGRAM_ALLOWED_USERS=deinTelegramName
+   RAILPACK_START_CMD=python -m memecoin_bot bot
+   ```
+   Dein Telegram-Name steht in Telegram unter Einstellungen → Benutzername (ohne @ eintragen).
+4. Speichern → **Deploy**. Unter **Deployments → View Logs** erscheint nach ein paar Minuten
+   **„✅ Bot @deinbot läuft“**.
 
-### 4. Deine Chat-ID freischalten
-Schreib deinem Bot in Telegram `/start`. Er antwortet: *„Dieser Bot ist privat. Deine Chat-ID: 123456789“*.
-Trag die Zahl in die `.env` ein (`TELEGRAM_ALLOWED_CHATS=123456789`; mehrere mit Komma), stoppe den Bot mit **Strg+C**
-und starte ihn neu. Fertig: `/scan` funktioniert.
+**3. Loslegen**
+Deinem Bot in Telegram `/scan` schicken.
 
-> Warum die Sperre? Sonst könnte jeder, der deinen Bot findet, Scans starten und deine API-Limits aufbrauchen.
+| Problem | Lösung |
+|---|---|
+| In den Logs stehen Fehler zu `main.py`, FFmpeg oder LLM | Railway startet das Video-Projekt statt des Bots: **Settings → Deploy → Custom Start Command** = `python -m memecoin_bot bot` |
+| „Bot-Token fehlt“ | Variable heißt nicht genau `MEMECOIN_BOT_TOKEN` oder Leerzeichen vor dem Token |
+| Bot antwortet „Dieser Bot ist privat“ | Benutzername falsch geschrieben – der Bot zeigt dir in der Antwort deinen echten Namen und deine Chat-ID |
+| Du hast keinen Telegram-Benutzernamen | Bot schickt dir bei `/start` deine Chat-ID → als `TELEGRAM_ALLOWED_CHATS` eintragen |
 
-### Läuft nur, solange der Rechner an ist
-Der Bot läuft auf deinem PC, solange das Fenster offen ist. Soll er rund um die Uhr erreichbar sein,
-brauchst du einen Rechner, der dauerhaft läuft, zum Beispiel:
-- einen kleinen Server (VPS) für ein paar Euro im Monat,
-- einen Raspberry Pi,
-- deinen PC mit Windows-Aufgabenplanung „Bei Anmeldung starten“.
+## Einrichtung auf dem eigenen PC
 
-Befehl jeweils: `python -m memecoin_bot bot`.
+1. Bot bei @BotFather anlegen (wie oben).
+2. `.env.example` nach `.env` kopieren und ausfüllen:
+   ```
+   MEMECOIN_BOT_TOKEN=7123456789:AAH...
+   TELEGRAM_ALLOWED_USERS=deinTelegramName
+   ```
+3. Starten:
+   ```bash
+   pip install -r requirements.txt
+   python -m memecoin_bot bot
+   ```
+Der Bot läuft, solange das Fenster offen und der PC an ist.
+
+> Warum die Sperre mit Benutzername/Chat-ID? Sonst könnte jeder, der deinen Bot findet, Scans starten und deine
+> API-Limits aufbrauchen.
 
 ## Ohne Telegram testen
 

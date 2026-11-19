@@ -7,8 +7,9 @@ Befehle:
   /status                       letzter Scan
   /hilfe                        Übersicht
 
-Zugriff: nur Chat-IDs aus TELEGRAM_ALLOWED_CHATS (oder TELEGRAM_CHAT_ID). Ohne Eintrag antwortet der Bot
-nur mit der eigenen Chat-ID, damit Fremde deine API-Limits nicht verbrauchen.
+Zugriff: nur Telegram-Benutzernamen aus TELEGRAM_ALLOWED_USERS oder Chat-IDs aus TELEGRAM_ALLOWED_CHATS
+(oder TELEGRAM_CHAT_ID). Allen anderen antwortet der Bot nur mit ihrer Chat-ID, damit Fremde deine API-Limits
+nicht verbrauchen.
 """
 from __future__ import annotations
 
@@ -86,8 +87,9 @@ class Job:
 
 
 class Bot:
-    def __init__(self, api: TelegramAPI, scanner: Scanner, allowed: set[int]):
+    def __init__(self, api: TelegramAPI, scanner: Scanner, allowed: set[int], allowed_users: set[str] | None = None):
         self.api, self.scanner, self.allowed = api, scanner, allowed
+        self.allowed_users = {u.lower() for u in allowed_users or set()}
         self.cfg = scanner.cfg
         self.jobs: queue.Queue[Job] = queue.Queue()
         self.last_scan: ScanResult | None = None
@@ -105,9 +107,12 @@ class Bot:
         args = parts[1:]
         if not cmd.startswith("/") and ADDRESS_RE.match(parts[0]):  # nackte Adresse = /check
             cmd, args = "/check", parts
-        if chat_id not in self.allowed:
-            self.api.send(chat_id, f"🔒 Dieser Bot ist privat.\nDeine Chat-ID: <code>{chat_id}</code>\n"
-                                   f"Trage sie in der .env als TELEGRAM_ALLOWED_CHATS ein und starte den Bot neu.")
+        username = str((msg.get("from") or {}).get("username") or "").lower()
+        if chat_id not in self.allowed and not (username and username in self.allowed_users):
+            self.api.send(chat_id, f"🔒 Dieser Bot ist privat.\nDeine Chat-ID: <code>{chat_id}</code>"
+                                   + (f" · Benutzername: <code>{report.h(username)}</code>" if username else "") +
+                                   "\nTrage den Benutzernamen als TELEGRAM_ALLOWED_USERS oder die Chat-ID als "
+                                   "TELEGRAM_ALLOWED_CHATS ein (.env oder Railway → Variables).")
             return
         if cmd in ("/start", "/hilfe", "/help"):
             self.api.send(chat_id, HELP)
@@ -220,7 +225,8 @@ class Bot:
         except Exception as e:
             log.warning("Befehlsmenü nicht gesetzt: %s", e)
         me = self.api.call("getMe")
-        log.info("Bot @%s läuft. Erlaubte Chats: %s", me.get("username"), sorted(self.allowed) or "keine")
+        log.info("Bot @%s läuft. Erlaubt: Chats %s, Nutzer %s", me.get("username"), sorted(self.allowed) or "–",
+                 sorted(self.allowed_users) or "–")
         print(f"✅ Bot @{me.get('username')} läuft – schreib ihm in Telegram /hilfe  (Strg+C beendet)", flush=True)
         threading.Thread(target=self.worker, daemon=True).start()
         offset = None
@@ -235,6 +241,17 @@ class Bot:
             except (requests.RequestException, RuntimeError) as e:
                 log.warning("Telegram-Verbindung: %s – neuer Versuch in 5 s", e)
                 time.sleep(5)
+
+
+def parse_users(*values: str | None) -> set[str]:
+    """Telegram-Benutzernamen, mit oder ohne @, Komma-getrennt."""
+    out: set[str] = set()
+    for v in values:
+        for part in re.split(r"[,\s;]+", v or ""):
+            part = part.strip().lstrip("@").lower()
+            if re.fullmatch(r"[a-z0-9_]{4,32}", part):
+                out.add(part)
+    return out
 
 
 def parse_allowed(*values: str | None) -> set[int]:
