@@ -300,3 +300,5 @@ def test_github_reply_runs_first_line_only():
     assert "GOODCAT" in out and "⭐ Favorit" in out and "Scan gestartet" not in out
     assert "Unbekannter Befehl" in run_command("hallo", demo_scanner(CFG))
     assert "Bitte so" in run_command("/check <script>", demo_scanner(CFG))
+    help_text = run_command("/hilfe", demo_scanner(CFG))
+    assert "/scan solana" in help_text and "/status" not in help_text
