@@ -26,7 +26,20 @@ Findet er nichts Überzeugendes, sagt er das klar: **„keine Kaufempfehlung“*
 | `/status` | Wann war der letzte Scan, wer war Favorit? |
 | `/hilfe` | Übersicht |
 
-## Einrichtung nur mit dem Handy (Railway, ca. 10 Minuten)
+## Am einfachsten: per GitHub-Kommentar (nur Handy, gratis, ohne Einrichtung)
+
+Der Bot läuft schon fertig in diesem GitHub-Projekt.
+1. GitHub-App öffnen → Projekt **Tiktok** → **Issues** → **„🤖 Memecoin-Bot“**.
+2. Einen Kommentar mit dem Befehl schreiben, z. B. `/scan`, `/scan solana` oder `/check <Contract>`.
+3. Der Bot reagiert sofort mit 👀. Nach ein paar Minuten kommt die Antwort als Kommentar,
+   und die GitHub-App schickt dir eine Benachrichtigung.
+
+Nur Kommentare vom Besitzer des Projekts lösen den Bot aus. Fremde können also keine Scans starten.
+Weil das Projekt öffentlich ist, sind die Antworten für alle sichtbar.
+Technik: `.github/workflows/memecoin-bot.yml` startet `python -m memecoin_bot github` auf GitHub Actions
+(für öffentliche Projekte kostenlos). `/invest` braucht hier immer einen Contract (`/invest 250 <Contract>`).
+
+## Als Telegram-Bot nur mit dem Handy (Railway, ca. 10 Minuten)
 
 Der Bot läuft auf **Railway**, einem Cloud-Dienst, den du komplett im Handy-Browser bedienst.
 Kosten: der erste Monat ist mit Testguthaben gratis, danach ca. 5 $/Monat (Hobby-Plan).
@@ -144,7 +157,8 @@ Alle Schwellen stehen in `memecoin_bot/config.yaml` und lassen sich ändern.
 
 ```
 memecoin_bot/
-  __main__.py      Befehle: bot, scan, check, demo
+  __main__.py      Befehle: bot, scan, check, demo, github
+  github_reply.py  GitHub-Modus: Befehl aus Issue-Kommentar -> Antwort-Kommentar
   telegram_bot.py  Telegram (Long-Polling, Warteschlange, Zugriffsschutz)
   scanner.py       Ablauf: sammeln → filtern → Tiefenprüfung → bewerten
   sources.py       DexScreener, GeckoTerminal, RugCheck, GoPlus, Honeypot.is (Rate-Limit, Cache, Retries)

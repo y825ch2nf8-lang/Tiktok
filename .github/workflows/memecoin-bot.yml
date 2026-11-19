@@ -1,0 +1,71 @@
+# Memecoin-Bot per GitHub-Kommentar: Schreib in einem Issue z. B. "/scan" – die Antwort kommt als Kommentar.
+# Reagiert NUR auf Kommentare des Repo-Besitzers (öffentliches Repo: Fremde können keine Scans auslösen).
+name: Memecoin-Bot
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Befehl, z. B. /scan, /scan solana, /check <Contract>, /invest 250 <Contract>"
+        required: true
+        default: "/scan"
+      issue:
+        description: "Issue-Nummer für die Antwort (leer = Antwort nur in der Zusammenfassung des Laufs)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: memecoin-bot
+  cancel-in-progress: false
+
+jobs:
+  antwort:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.comment.user.login == github.repository_owner &&
+       startsWith(github.event.comment.body, '/') &&
+       github.event.issue.pull_request == null)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ISSUE: ${{ github.event.issue.number || inputs.issue }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: "👀 Kommentar bestätigen"
+        if: github.event_name == 'issue_comment'
+        env:
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: gh api -X POST "repos/$GITHUB_REPOSITORY/issues/comments/$COMMENT_ID/reactions" -f content=eyes >/dev/null
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhängigkeiten
+        run: pip install --quiet requests PyYAML python-dotenv tzdata
+
+      - name: Befehl ausführen
+        env:
+          COMMAND: ${{ github.event.comment.body || inputs.command }}
+        run: python -m memecoin_bot github --out antwort.md
+
+      - name: Antwort posten
+        if: always()
+        run: |
+          if [ ! -s antwort.md ]; then
+            echo "❌ Der Bot ist auf einen Fehler gestoßen. Details: $RUN_URL" > antwort.md
+          fi
+          printf '\n\n<sub>Lauf: %s · Keine Anlageberatung.</sub>\n' "$RUN_URL" >> antwort.md
+          cat antwort.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$ISSUE" ]; then
+            gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body-file antwort.md
+          fi

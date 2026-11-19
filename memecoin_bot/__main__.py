@@ -4,6 +4,7 @@
   scan [--chain solana]     Scan im Terminal (gleiches Ergebnis wie /scan im Bot)
   check <Contract> [--chain base]   einzelnen Coin prüfen
   demo                      Offline-Durchlauf mit erfundenen Tokens (ohne Internet)
+  github --out antwort.md   Befehl aus $COMMAND ausführen (für den GitHub-Workflow, Antwort als Issue-Kommentar)
 """
 from __future__ import annotations
 
@@ -65,6 +66,9 @@ def main(argv=None):
     c.add_argument("address")
     c.add_argument("--chain")
     sub.add_parser("demo", help="Offline-Demo mit erfundenen Tokens")
+    g = sub.add_parser("github", help="Befehl aus $COMMAND ausführen, Antwort in Datei schreiben")
+    g.add_argument("--out", required=True)
+    g.add_argument("--demo", action="store_true", help="mit erfundenen Daten (Test)")
     args = ap.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO if args.verbose else logging.WARNING,
@@ -83,6 +87,16 @@ def main(argv=None):
         if not res:
             sys.exit("Kein Pool zu dieser Adresse gefunden.")
         print(plain(report.detail(res[0], cfg, res[1])))
+    elif args.cmd == "github":
+        from .github_reply import run_command
+        if args.demo:
+            from .demo import demo_scanner
+            scanner = demo_scanner(cfg)
+        else:
+            scanner = Scanner(cfg)
+        text = run_command(os.getenv("COMMAND", "/hilfe"), scanner)
+        Path(args.out).write_text(text, encoding="utf-8")
+        print(plain(text))
     elif args.cmd == "bot":
         from .telegram_bot import Bot, TelegramAPI, parse_allowed, parse_users
         token = os.getenv("MEMECOIN_BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN")
