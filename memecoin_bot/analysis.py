@@ -30,6 +30,10 @@ def de(x: float, digits: int = 1) -> str:
     return f"{x:,.{digits}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def usd_short(x: float) -> str:
+    return f"{de(x / 1e6, 2)} Mio. $" if x >= 1e6 else f"{de(x / 1e3, 0)} Tsd. $"
+
+
 def clamp01(x: float) -> float:
     return max(0.0, min(1.0, x))
 
@@ -460,8 +464,12 @@ def analyze(c: Candidate, d: Deep, cfg: dict) -> Analysis:
     traders = act.get("h24", {}).get("traders") or 0
     if holders and traders > 5 * holders and holders < 10_000:
         red.append(f"{traders:,} Trader/Tag bei nur {holders:,} Holdern – Wash-Trading-Verdacht".replace(",", "."))
-    if wf and c.vol24 > 300_000 and wf.get("n", 0) < 5:
-        red.append("Hohes Volumen, aber kaum Trades über 500 $ – Bot-Volumen-Verdacht")
+    # Bot-Volumen: viel Umsatz, aber fast nichts davon aus echten (großen) Trades. Die Trade-Liste ist auf 300
+    # Einträge begrenzt – nur wenn sie nicht voll ist, kennen wir ALLE großen Trades der letzten 24 h.
+    big_share = (wf.get("buy_usd", 0) + wf.get("sell_usd", 0)) / c.vol24 if wf and c.vol24 else None
+    if wf and c.vol24 > 300_000 and (wf.get("n", 0) < 5 or (wf.get("n", 0) < 300 and big_share < 0.05)):
+        red.append(f"Hohes Volumen ({usd_short(c.vol24)}), aber nur {de((big_share or 0) * 100)} % davon aus Trades "
+                   f"über 500 $ – Bot-Volumen-Verdacht")
     chg7 = om.get("chg7d")
     vt = om.get("vol_trend")
     if chg7 is not None and chg7 < -0.4 and vt is not None and vt < 0.7:

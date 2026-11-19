@@ -17,7 +17,7 @@ Findet er nichts Überzeugendes, sagt er das klar: **„keine Kaufempfehlung“*
 
 | Befehl | Was passiert |
 |---|---|
-| `/scan` | Scannt alle 4 Chains. Dauert ca. 2–4 Minuten. |
+| `/scan` | Scannt alle 4 Chains. Dauert ca. 3–12 Minuten (je nach Auslastung der Datenquellen). |
 | `/scan solana` | Nur eine Chain (`solana`, `bsc`, `eth`, `base`). Geht schneller. |
 | `/check <Contract>` | Prüft einen bestimmten Coin. Du kannst auch einfach nur die Adresse schicken. |
 | `/check <Contract> base` | Wie oben, mit fester Chain. |
@@ -31,7 +31,7 @@ Findet er nichts Überzeugendes, sagt er das klar: **„keine Kaufempfehlung“*
 Der Bot läuft schon fertig in diesem GitHub-Projekt.
 1. GitHub-App öffnen → Projekt **Tiktok** → **Issues** → **„🤖 Memecoin-Bot“**.
 2. Einen Kommentar mit dem Befehl schreiben, z. B. `/scan`, `/scan solana` oder `/check <Contract>`.
-3. Der Bot reagiert sofort mit 👀. Nach ein paar Minuten kommt die Antwort als Kommentar,
+3. Der Bot reagiert sofort mit 👀. Die Antwort kommt als Kommentar (`/check` ca. 1 Min., `/scan` ca. 10 Min.),
    und die GitHub-App schickt dir eine Benachrichtigung.
 
 Nur Kommentare vom Besitzer des Projekts lösen den Bot aus. Fremde können also keine Scans starten.
