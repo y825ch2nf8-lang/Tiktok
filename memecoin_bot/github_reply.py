@@ -47,11 +47,19 @@ def run_command(text: str, scanner: Scanner) -> str:
         except Exception as e:  # Antwort trotzdem posten
             log.exception("%s fehlgeschlagen", job.name)
             api.sent.append(f"❌ {job.name} fehlgeschlagen: {e}")
-    parts = [m for m in api.sent if not m.startswith(PROGRESS_PREFIXES)]
-    if cmd.split()[0].split("@")[0].lower() == "/invest" and any("Kein Favorit" in p for p in parts):
+    parts = [_github_help(m) for m in api.sent if not m.startswith(PROGRESS_PREFIXES)]
+    if (cmd.split() or [""])[0].split("@")[0].lower() == "/invest" and any("Kein Favorit" in p for p in parts):
         parts.append("Tipp: Im GitHub-Modus merkt sich der Bot keinen Scan. Nutze <code>/invest 250 &lt;Contract&gt;</code>.")
     head = f"🤖 <b>Antwort auf</b> <code>{_esc(cmd[:80])}</code>"
     return head + "\n\n" + "\n\n---\n\n".join(parts)
+
+
+def _github_help(text: str) -> str:
+    """Hilfe-Text: Zeilen entfernen, die nur im dauerhaft laufenden Telegram-Bot gelten."""
+    if "Memecoin-Scanner für Trust Wallet" not in text:
+        return text
+    drop = ("/invest 250 – Szenarien für 250 € mit dem Favoriten", "/status –")
+    return "\n".join(line for line in text.splitlines() if not line.startswith(drop))
 
 
 def _esc(s: str) -> str:

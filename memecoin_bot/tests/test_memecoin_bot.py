@@ -300,3 +300,15 @@ def test_github_reply_runs_first_line_only():
     assert "GOODCAT" in out and "⭐ Favorit" in out and "Scan gestartet" not in out
     assert "Unbekannter Befehl" in run_command("hallo", demo_scanner(CFG))
     assert "Bitte so" in run_command("/check <script>", demo_scanner(CFG))
+    help_text = run_command("/hilfe", demo_scanner(CFG))
+    assert "/scan solana" in help_text and "/status" not in help_text
+
+
+def test_bot_volume_detected_by_share_of_big_trades():
+    gp = {"is_honeypot": "0", "buy_tax": "0", "sell_tax": "0", "owner_address": "", "is_open_source": "1"}
+    small = [{"kind": "buy" if i % 2 else "sell", "volume_in_usd": "600", "tx_from_address": f"w{i}"} for i in range(16)]
+    a = analyze(_cand(vol24=1_150_000), Deep(goplus=gp, trades=small), CFG)  # wie DIGS: <1 % große Trades
+    assert any("Bot-Volumen" in r for r in a.red_flags)
+    full = [{"kind": "buy", "volume_in_usd": "600", "tx_from_address": f"w{i}"} for i in range(300)]
+    a = analyze(_cand(vol24=1_150_000), Deep(goplus=gp, trades=full), CFG)  # Liste voll -> nicht beurteilbar
+    assert not any("Bot-Volumen" in r for r in a.red_flags)

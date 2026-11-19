@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 
 HELP = """🤖 <b>Memecoin-Scanner für Trust Wallet</b>
 
-/scan – alle Chains scannen (Solana, BSC, Ethereum, Base). Dauert ca. 2–4 Minuten.
+/scan – alle Chains scannen (Solana, BSC, Ethereum, Base). Dauert ca. 3–12 Minuten.
 /scan solana – nur eine Chain (solana, bsc, eth, base)
 /check &lt;Contract&gt; – einen Coin auf Rug-Pull, Honeypot, Whales &amp; Co. prüfen
 /invest 250 – Szenarien für 250 € mit dem Favoriten des letzten Scans
@@ -161,7 +161,7 @@ class Bot:
 
     # ------------------------------------------------------------------ Aufgaben
     def do_scan(self, chat_id: int, chains: list[str] | None):
-        self.api.send(chat_id, "🔎 Scan gestartet – das dauert ca. 2–4 Minuten …")
+        self.api.send(chat_id, "🔎 Scan gestartet – das dauert ca. 3–12 Minuten …")
         last = [0.0]
 
         def progress(s: str):
